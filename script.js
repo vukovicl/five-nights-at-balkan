@@ -997,15 +997,24 @@ function updateGame(dt) {
     return;
   }
 
-  // Panoramsko pomicanje pogleda mišem u uredu (kad monitor nije podignut)
+  // Panoramsko pomicanje pogleda mišem u uredu (brže što je miš bliže rubu ekrana)
   if (!state.camOpen) {
     const maxPan = state.officeWidth - canvas.width; // 520px
-    if (state.mouseX < 340) {
-      const factor = (340 - state.mouseX) / 340;
-      state.panX = Math.max(0, state.panX - factor * 520 * dt);
-    } else if (state.mouseX > canvas.width - 340) {
-      const factor = (state.mouseX - (canvas.width - 340)) / 340;
-      state.panX = Math.min(maxPan, state.panX + factor * 520 * dt);
+    const leftThreshold = 520;
+    const rightThreshold = canvas.width - leftThreshold; // 760
+
+    if (state.mouseX < leftThreshold) {
+      // Što je miš bliže lijevom rubu ekrana (0px), to je proximity veći (0.0 do 1.0)
+      const proximity = Math.min(1.0, Math.max(0, (leftThreshold - state.mouseX) / leftThreshold));
+      // Nelinearna krivulja ubrzanja: lagano uz sredinu (100 px/s) do munjevito brzo uz rub (1500 px/s)
+      const speed = 100 + 1400 * Math.pow(proximity, 1.55);
+      state.panX = Math.max(0, state.panX - speed * dt);
+    } else if (state.mouseX > rightThreshold) {
+      // Što je miš bliže desnom rubu ekrana (1280px), to je proximity veći (0.0 do 1.0)
+      const proximity = Math.min(1.0, Math.max(0, (state.mouseX - rightThreshold) / (canvas.width - rightThreshold)));
+      // Nelinearna krivulja ubrzanja
+      const speed = 100 + 1400 * Math.pow(proximity, 1.55);
+      state.panX = Math.min(maxPan, state.panX + speed * dt);
     }
   }
 
@@ -1907,17 +1916,17 @@ function drawDoorwayAndControls(isLeft) {
   ctx.fillStyle = doorClosed ? '#22cc44' : '#cc2222';
   ctx.fillRect(panelX + 9, panelY + 14, 40, 52);
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 11px Courier New';
+  ctx.font = 'bold 12px Courier New';
   ctx.textAlign = 'center';
-  ctx.fillText('DOOR', panelX + 29, panelY + 42);
-  ctx.fillText(isLeft ? '[A]' : '[D]', panelX + 29, panelY + 56);
+  ctx.fillText('DOOR', panelX + 29, panelY + 45);
 
   // Gumb LIGHT (Svjetlo)
   ctx.fillStyle = lightOn ? '#ffee55' : '#444b58';
   ctx.fillRect(panelX + 9, panelY + 84, 40, 52);
   ctx.fillStyle = lightOn ? '#000' : '#fff';
-  ctx.fillText('LIGHT', panelX + 29, panelY + 112);
-  ctx.fillText(isLeft ? '[Z]' : '[C]', panelX + 29, panelY + 126);
+  ctx.font = 'bold 12px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('LIGHT', panelX + 29, panelY + 115);
 }
 
 // ----------------------------------------------------------------------------
@@ -2276,6 +2285,32 @@ canvas.addEventListener('mousemove', e => {
   const pos = getCanvasMousePos(e);
   state.mouseX = pos.x;
   state.mouseY = pos.y;
+
+  // Promijeni kursor u 'pointer' kad je miš iznad klikabilnih tipki
+  if (state.screen === 'PLAYING') {
+    let isClickable = false;
+    if (state.camOpen) {
+      if (pos.x >= 59 && pos.x <= 421 && pos.y >= 599 && pos.y <= 637) isClickable = true;
+      for (const cam of Object.values(CAMERAS)) {
+        if (pos.x >= cam.x - 26 && pos.x <= cam.x + 26 && pos.y >= cam.y - 16 && pos.y <= cam.y + 16) {
+          isClickable = true;
+          break;
+        }
+      }
+    } else {
+      const worldX = pos.x + state.panX;
+      const worldY = pos.y;
+      if (Math.hypot(worldX - 900, worldY - 158) <= 28) isClickable = true;
+      // Lijevi i desni paneli (DOOR i LIGHT)
+      if ((worldX >= 45 && worldX <= 103 && worldY >= 304 && worldY <= 426) ||
+          (worldX >= 1705 && worldX <= 1763 && worldY >= 304 && worldY <= 426)) {
+        isClickable = true;
+      }
+    }
+    canvas.style.cursor = isClickable ? 'pointer' : 'default';
+  } else {
+    canvas.style.cursor = 'default';
+  }
 });
 
 canvas.addEventListener('mousedown', e => {
@@ -2334,7 +2369,7 @@ canvas.addEventListener('mousedown', e => {
       return;
     }
 
-    // 2. Lijevi panel (DOOR & LIGHT)
+    // 2. Lijevi panel (DOOR & LIGHT) - SAMO PUTEM KLIKA
     if (worldX >= 45 && worldX <= 103 && worldY >= 304 && worldY <= 356) {
       toggleLeftDoor();
       return;
@@ -2344,7 +2379,7 @@ canvas.addEventListener('mousedown', e => {
       return;
     }
 
-    // 3. Desni panel (DOOR & LIGHT)
+    // 3. Desni panel (DOOR & LIGHT) - SAMO PUTEM KLIKA
     if (worldX >= 1705 && worldX <= 1763 && worldY >= 304 && worldY <= 356) {
       toggleRightDoor();
       return;
@@ -2360,6 +2395,7 @@ window.addEventListener('mouseup', () => {
   state.windingTape = false;
 });
 
+// Tipkovnica: UKLONJENI klikovi na [A], [D], [Z], [C] i [F] test
 window.addEventListener('keydown', e => {
   if (state.screen !== 'PLAYING') return;
   const key = e.key.toLowerCase();
@@ -2367,16 +2403,6 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Space') {
     e.preventDefault();
     toggleCameraMonitor();
-  } else if (key === 'a') {
-    toggleLeftDoor();
-  } else if (key === 'd') {
-    toggleRightDoor();
-  } else if (key === 'z') {
-    toggleLeftLight();
-  } else if (key === 'c') {
-    toggleRightLight();
-  } else if (key === 'f') {
-    triggerFoxySprintTest();
   } else if (['1', '2', '3', '4', '5', '6'].includes(key)) {
     const found = Object.values(CAMERAS).find(c => c.key === key);
     if (found) {
@@ -5078,7 +5104,7 @@ function drawGreenScreenCAM1C(ctx, omcoChar, omcoEnt) {
 
     ctx.fillStyle = '#ff2222';
     ctx.font = 'bold 24px Courier New';
-    ctx.fillText('🏃💨 JURI PREMA LIJEVIM VRATIMA! SPUŠTAJ [A]!', 450, 140);
+    ctx.fillText('🏃💨 JURI PREMA LIJEVIM VRATIMA! ZATVORI ROLETNU!', 450, 140);
   }
 }
 
@@ -5334,7 +5360,7 @@ function drawWestHallwayCAM2A(ctx, omcoChar, omcoEnt) {
     ctx.fillStyle = '#ff2222';
     ctx.font = 'bold 24px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText('🚨 UZBUNA: SPRINT KROZ LIJEVI HODNIK! [A] ZA ROLETNU! 🚨', vx, H - 45);
+    ctx.fillText('🚨 UZBUNA: SPRINT KROZ LIJEVI HODNIK! ZATVORI LIJEVA VRATA! 🚨', vx, H - 45);
   }
 
   ctx.restore();
