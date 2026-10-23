@@ -1739,39 +1739,10 @@ function renderCCTV() {
   const camId = state.currentCam;
 
   // --------------------------------------------------------------------------
-  // POSEBNA KAMERA: CAM 6 (Kuhinja & Roštilj - VIDEO ISKLJUČEN / SAMO AUDIO)
+  // VIZUALNI 3D PERSPEKTIVNI PRIKAZ SVIH 11 KAMERA
   // --------------------------------------------------------------------------
-  if (camId === '6') {
-    // Intenzivni šum jer je video isključen
-    for (let i = 0; i < 450; i++) {
-      ctx.fillStyle = Math.random() > 0.5 ? '#222' : '#090909';
-      ctx.fillRect(Math.random() * W, Math.random() * H, 45, 4);
-    }
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 30px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText('📵 KAMERA ISKLJUČENA - SAMO AUDIO FEED', W * 0.42, H * 0.44);
-    ctx.font = '18px Courier New';
-    ctx.fillStyle = '#ffaa00';
-    ctx.fillText('(Kuhinja & Roštilj kod Mileta)', W * 0.42, H * 0.50);
-
-    const someoneInKitchen = state.entities.choda.loc === '6' || state.entities.mudja.loc === '6';
-    if (someoneInKitchen) {
-      ctx.fillStyle = '#33ff55';
-      ctx.font = 'bold 20px Courier New';
-      ctx.fillText('🔊 [ZVEKET LONACA, TANJURA I CVRČANJE ĆEVAPA!]', W * 0.42, H * 0.58);
-    } else {
-      ctx.fillStyle = '#777';
-      ctx.font = '16px Courier New';
-      ctx.fillText('🔇 [Tišina u kuhinji...]', W * 0.42, H * 0.58);
-    }
-  } else {
-    // ------------------------------------------------------------------------
-    // VIZUALNI PRIKAZ OSTALIH 10 KAMERA
-    // ------------------------------------------------------------------------
-    drawCameraRoomBackground(camId);
-    drawCharactersOnCamera(camId);
-  }
+  drawCameraRoomBackground(camId);
+  drawCharactersOnCamera(camId);
 
   // --------------------------------------------------------------------------
   // MEHANIKA KAZETOFONA / DONACIJSKE TRAKE (uvijek prikazana na CAM 5 + brzi bar)
@@ -1806,95 +1777,117 @@ function renderCCTV() {
   ctx.fillText(`REC // ${CAMERAS[camId].name}`, 75, 62);
 }
 
+// ----------------------------------------------------------------------------
+// 3D PERSPEKTIVNE POZICIJE LIKOVA PO SOBAMA
+// ----------------------------------------------------------------------------
+const ROOM_SLOTS_3D = {
+  '1A': [ // Show Stage: fiksni raspored trija na drvenoj bini
+    { id: 'mudja', x: 450, y: 350, r: 84 },
+    { id: 'baka',  x: 295, y: 365, r: 76 },
+    { id: 'choda', x: 605, y: 365, r: 76 }
+  ],
+  '1B': [ // Sala kafane: stolovi i prolazi u perspektivi
+    { x: 285, y: 390, r: 70 },
+    { x: 450, y: 340, r: 58 },
+    { x: 615, y: 390, r: 70 }
+  ],
+  '2A': [ // Lijevi hodnik kad Baka vreba
+    { x: 450, y: 380, r: 80 }
+  ],
+  '2B': [ // Lijevi slijepi kut - ekstremni krupni plan pred vratima!
+    { x: 390, y: 390, r: 125 }
+  ],
+  '3': [ // Špajza s pivom - stoji pod njihajućom žaruljom
+    { x: 450, y: 405, r: 86 }
+  ],
+  '4A': [ // Desni hodnik
+    { x: 430, y: 345, r: 58 },
+    { x: 535, y: 425, r: 86 }
+  ],
+  '4B': [ // Desni kut - krupni plan pred desnim vratima ureda
+    { x: 510, y: 390, r: 125 }
+  ],
+  '7': [ // Toaleti kafane
+    { x: 355, y: 375, r: 74 },
+    { x: 555, y: 365, r: 72 }
+  ]
+};
+
 function drawCameraRoomBackground(camId) {
-  ctx.save();
-  // Osnovna prostorija u perspektivi
-  ctx.fillStyle = '#111518';
-  ctx.fillRect(0, 0, 900, 720);
-
-  ctx.strokeStyle = '#252d33';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(120, 90, 660, 460);
-  ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(120, 90);
-  ctx.moveTo(900, 0); ctx.lineTo(780, 90);
-  ctx.moveTo(0, 720); ctx.lineTo(120, 550);
-  ctx.moveTo(900, 720); ctx.lineTo(780, 550);
-  ctx.stroke();
-
-  ctx.textAlign = 'center';
-  ctx.font = 'bold 16px Courier New';
-  ctx.fillStyle = '#55666e';
-
   switch (camId) {
-    case '1A': // Glavni Studio / Bina
-      ctx.fillStyle = '#3b1515';
-      ctx.fillRect(140, 100, 620, 190);
-      ctx.fillStyle = '#ffcc00';
-      ctx.fillText('★ GLAVNA STREAMING BINA & HARMONIKA ★', 450, 135);
-      break;
-
-    case '1B': // Sala kafane sa stolovima
-      for (let i = 0; i < 3; i++) {
-        const tx = 200 + i * 210;
-        ctx.fillStyle = '#772222';
-        ctx.fillRect(tx, 380, 130, 80);
-        ctx.strokeStyle = '#fff';
-        ctx.strokeRect(tx, 380, 130, 80);
-      }
-      ctx.fillStyle = '#8899aa';
-      ctx.fillText('SALA KAFANE - STOLOVI S KARIRANIM STOLNJACIMA', 450, 140);
-      break;
-
-    case '1C': // Green Screen Kutak (Omco i zavjesa)
-      drawGreenScreenCAM1C(ctx, getCharById('omco'), state.entities.omco);
-      break;
-
-    case '2A': // Lijevi hodnik (animacija sprinta Foxy tipa!)
-      drawWestHallwayCAM2A(ctx, getCharById('omco'), state.entities.omco);
-      break;
-
-    case '3': // Špajza s gajbama piva
-      for (let g = 0; g < 4; g++) {
-        ctx.fillStyle = '#aa7711';
-        ctx.fillRect(160 + g * 120, 410, 95, 75);
-        ctx.fillStyle = '#fff';
-        ctx.fillText('PIVO', 207 + g * 120, 452);
-      }
-      ctx.fillText('ŠPAJZA S GAJBAMA PIVA I AJVAROM', 450, 135);
-      break;
-
-    case '5': // Backstage & Kazetofon
-      ctx.fillStyle = '#222830';
-      ctx.fillRect(260, 340, 380, 160);
-      ctx.fillStyle = '#ffaa00';
-      ctx.fillText('📻 STARI KAZETOFON ZA DONACIJE', 450, 375);
-      break;
-
-    case '7': // Toaleti kafane
-      ctx.fillText('TOALETI KAFANE', 450, 135);
+    case '1A': drawStageCAM1A(ctx); break;
+    case '1B': drawDiningHallCAM1B(ctx); break;
+    case '1C': drawGreenScreenCAM1C(ctx, getCharById('omco'), state.entities.omco); break;
+    case '2A': drawWestHallwayCAM2A(ctx, getCharById('omco'), state.entities.omco); break;
+    case '2B': drawWestCornerCAM2B(ctx); break;
+    case '3':  drawSupplyClosetCAM3(ctx); break;
+    case '4A': drawEastHallwayCAM4A(ctx); break;
+    case '4B': drawEastCornerCAM4B(ctx); break;
+    case '5':  drawBackstageCAM5(ctx); break;
+    case '6':  drawKitchenCAM6(ctx, state.entities.choda.loc === '6' || state.entities.mudja.loc === '6'); break;
+    case '7':  drawRestroomsCAM7(ctx); break;
+    default:
+      ctx.fillStyle = '#0a0d10';
+      ctx.fillRect(0, 0, 900, 720);
       break;
   }
-  ctx.restore();
 }
 
 function drawCharactersOnCamera(camId) {
+  // 1C, 5 i 6 imaju integrirano 3D renderiranje likova
+  if (camId === '1C' || camId === '5' || camId === '6') return;
+
   const present = [];
   ['mudja', 'baka', 'choda'].forEach(id => {
     if (state.entities[id].loc === camId) present.push(id);
   });
+  if (present.length === 0) return;
 
+  if (camId === '1A') {
+    // Glavna bina - svaki streamer ima svoje fiksno mjesto
+    present.forEach(id => {
+      const ch = getCharById(id);
+      const slot = ROOM_SLOTS_3D['1A'].find(s => s.id === id);
+      if (!slot) return;
+
+      // 3D sjena na podu bine
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.beginPath();
+      ctx.ellipse(slot.x, slot.y + slot.r * 1.05, slot.r * 0.85, slot.r * 0.28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      drawCharacterPortrait(ctx, ch, slot.x, slot.y, slot.r);
+
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = 'bold 15px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(ch.name, slot.x, slot.y + slot.r * 1.8);
+    });
+    return;
+  }
+
+  // Ostale prostorije s 3D perspective slotovima
+  const slots = ROOM_SLOTS_3D[camId] || [{ x: 450, y: 350, r: 75 }];
   present.forEach((id, index) => {
     const ch = getCharById(id);
-    const cx = 310 + index * 165;
-    const cy = (camId === '2B' || camId === '4B') ? 340 : 295;
-    const rad = (camId === '2B' || camId === '4B') ? 92 : 66;
-    drawCharacterPortrait(ctx, ch, cx, cy, rad);
+    const slot = slots[Math.min(index, slots.length - 1)];
+
+    // 3D sjena na podu
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+    ctx.beginPath();
+    ctx.ellipse(slot.x, slot.y + slot.r * 1.05, slot.r * 0.85, slot.r * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    drawCharacterPortrait(ctx, ch, slot.x, slot.y, slot.r);
 
     ctx.fillStyle = '#ffaa00';
     ctx.font = 'bold 15px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText(ch.name, cx, cy + rad * 1.9);
+    ctx.fillText(ch.name, slot.x, slot.y + slot.r * 1.85);
   });
 }
 
@@ -2199,6 +2192,1378 @@ window.addEventListener('keydown', e => {
   }
 });
 
+
+
+// ============================================================================
+// 3D PERSPEKTIVNE PROSTORIJE (SVIH 11 KAMERA)
+// ============================================================================
+
+// 1. CAM 1A: GLAVNI STUDIO / BINA (SHOW STAGE)
+function drawStageCAM1A(ctx) {
+  const W = 900, H = 720;
+  const vx = 450, vy = 230;
+
+  ctx.save();
+  ctx.fillStyle = '#080507';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stražnji zid bine
+  ctx.fillStyle = '#14080b';
+  ctx.fillRect(180, 80, 540, 240);
+
+  // Zlatni natpis bine i svjetlucave zvijezde
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = 'bold 22px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('★ BALKAN SHOW STAGE // KAFANA LIVE ★', vx, 115);
+
+  const starTwinkle = Math.sin(Date.now() * 0.006);
+  ctx.fillStyle = starTwinkle > 0 ? '#ffea77' : '#aa8800';
+  ctx.font = '16px Courier New';
+  ctx.fillText('★ ★ ★ MUĐA, BAKA & CHODA ★ ★ ★', vx, 142);
+
+  // Crveni baršunasti zastori na bokovima
+  const drawCurtainFolds = (startX, endX, isLeft) => {
+    const width = Math.abs(endX - startX);
+    ctx.fillStyle = '#4a0c16';
+    ctx.fillRect(isLeft ? startX : startX - width, 0, width, H);
+    // Nabori zastora
+    ctx.strokeStyle = '#2d060c';
+    ctx.lineWidth = 5;
+    for (let x = Math.min(startX, endX) + 12; x < Math.max(startX, endX); x += 22) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.quadraticCurveTo(x + (isLeft ? 8 : -8), 360, x, H);
+      ctx.stroke();
+    }
+    // Zlatni obrub
+    ctx.strokeStyle = '#c99e28';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(isLeft ? endX : startX, 0);
+    ctx.lineTo(isLeft ? endX : startX, H);
+    ctx.stroke();
+  };
+  drawCurtainFolds(0, 160, true);
+  drawCurtainFolds(900, 740, false);
+
+  // Gornji ukrasni nabor zastora
+  ctx.fillStyle = '#5a0f1b';
+  ctx.beginPath();
+  ctx.moveTo(160, 0);
+  ctx.quadraticCurveTo(450, 70, 740, 0);
+  ctx.lineTo(740, 0);
+  ctx.lineTo(160, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3D DRVENA BINA U PERSPEKTIVI
+  const stageTopY = 320;
+  const stageFrontY = 510;
+  const stageFrontH = 140;
+
+  // Površina drvenog poda bine
+  const stageFloorPoly = new Path2D();
+  stageFloorPoly.moveTo(220, stageTopY);
+  stageFloorPoly.lineTo(680, stageTopY);
+  stageFloorPoly.lineTo(840, stageFrontY);
+  stageFloorPoly.lineTo(60, stageFrontY);
+  stageFloorPoly.closePath();
+
+  ctx.save();
+  ctx.clip(stageFloorPoly);
+  ctx.fillStyle = '#3a2012';
+  ctx.fillRect(0, stageTopY, W, stageFrontY - stageTopY);
+
+  // Drvene daske u perspektivi
+  const numPlanks = 9;
+  for (let p = 0; p < numPlanks; p++) {
+    const t0 = Math.pow(p / numPlanks, 1.4);
+    const t1 = Math.pow((p + 1) / numPlanks, 1.4);
+    const y0 = stageTopY + (stageFrontY - stageTopY) * t0;
+    const y1 = stageTopY + (stageFrontY - stageTopY) * t1;
+
+    ctx.fillStyle = p % 2 === 0 ? '#452615' : '#331b0e';
+    ctx.fillRect(0, y0, W, y1 - y0);
+    ctx.strokeStyle = '#201007';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, y0, W, y1 - y0);
+  }
+  ctx.restore();
+
+  // Prednja vertikalna fronta bine
+  ctx.fillStyle = '#221108';
+  ctx.fillRect(60, stageFrontY, 780, stageFrontH);
+  ctx.strokeStyle = '#110804';
+  ctx.lineWidth = 3;
+  for (let x = 60; x <= 840; x += 35) {
+    ctx.beginPath();
+    ctx.moveTo(x, stageFrontY);
+    ctx.lineTo(x, stageFrontY + stageFrontH);
+    ctx.stroke();
+  }
+  // Zlatna lajsna na vrhu i dnu fronte bine
+  ctx.fillStyle = '#d4af37';
+  ctx.fillRect(55, stageFrontY - 6, 790, 8);
+  ctx.fillRect(55, stageFrontY + stageFrontH - 6, 790, 8);
+
+  // 3 Konusna reflektora koja osvjetljavaju 3 pozicije izvođača
+  const drawSpotlightCone = (floorX, floorY, color) => {
+    ctx.save();
+    const cone = ctx.createRadialGradient(floorX, floorY, 15, floorX, floorY, 130);
+    cone.addColorStop(0, color);
+    cone.addColorStop(0.7, color.replace('0.35', '0.12'));
+    cone.addColorStop(1, 'transparent');
+    ctx.fillStyle = cone;
+    ctx.beginPath();
+    ctx.ellipse(floorX, floorY, 130, 48, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+  drawSpotlightCone(295, 410, 'rgba(255, 180, 50, 0.35)'); // Baka
+  drawSpotlightCone(450, 395, 'rgba(255, 230, 160, 0.42)'); // Muđa
+  drawSpotlightCone(605, 410, 'rgba(255, 200, 60, 0.35)'); // Choda
+
+  // Scenski rekviziti: Pojačala, zvučnici i harmonika
+  // Lijevo koncertno pojačalo
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(90, 410, 68, 95);
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(90, 410, 68, 95);
+  ctx.fillStyle = '#ff2222';
+  ctx.beginPath();
+  ctx.arc(105, 422, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Balkan harmonika naslonjena na lijevo pojačalo
+  ctx.fillStyle = '#aa1122';
+  ctx.fillRect(155, 435, 48, 65);
+  ctx.fillStyle = '#fff';
+  for (let k = 0; k < 6; k++) {
+    ctx.fillRect(158 + k * 7, 472, 5, 22);
+    if (k < 5) {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(162 + k * 7, 472, 3, 13);
+      ctx.fillStyle = '#fff';
+    }
+  }
+  // Mjeh harmonike
+  ctx.strokeStyle = '#eee';
+  ctx.lineWidth = 2;
+  for (let m = 0; m < 5; m++) {
+    ctx.strokeRect(162 + m * 5, 442, 4, 24);
+  }
+
+  // Desni scenski monitor zvučnik (wedge)
+  ctx.fillStyle = '#181818';
+  ctx.beginPath();
+  ctx.moveTo(710, 500);
+  ctx.lineTo(765, 460);
+  ctx.lineTo(795, 495);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.stroke();
+
+  // Statični mikrofoni na stalcima
+  const drawMicStand = (x, y) => {
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 40); ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.fillStyle = '#bbb';
+    ctx.beginPath();
+    ctx.arc(x, y - 4, 6, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  // Prikazuj mikrofone ako lik nije na poziciji
+  if (state.entities.baka.loc !== '1A') drawMicStand(295, 360);
+  if (state.entities.mudja.loc !== '1A') drawMicStand(450, 340);
+  if (state.entities.choda.loc !== '1A') drawMicStand(605, 360);
+
+  ctx.restore();
+}
+
+// 2. CAM 1B: SALA KAFANE SA STOLOVIMA (DINING HALL)
+function drawDiningHallCAM1B(ctx) {
+  const W = 900, H = 720;
+  const vx = 450, vy = 265;
+
+  ctx.save();
+  ctx.fillStyle = '#09080a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stražnji zid sa svodom prema bini
+  ctx.fillStyle = '#141217';
+  ctx.fillRect(220, 110, 460, 200);
+
+  // Zidovi od cigle i drvene obloge
+  const leftGrad = ctx.createLinearGradient(0, 0, 220, 0);
+  leftGrad.addColorStop(0, '#211816');
+  leftGrad.addColorStop(1, '#110c0b');
+  ctx.fillStyle = leftGrad;
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(220, 110);
+  ctx.lineTo(220, 310); ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  const rightGrad = ctx.createLinearGradient(W, 0, 680, 0);
+  rightGrad.addColorStop(0, '#211816');
+  rightGrad.addColorStop(1, '#110c0b');
+  ctx.fillStyle = rightGrad;
+  ctx.beginPath();
+  ctx.moveTo(W, 0); ctx.lineTo(680, 110);
+  ctx.lineTo(680, 310); ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Uokvirene slike na lijevom zidu
+  ctx.fillStyle = '#3d2c1e';
+  ctx.fillRect(60, 210, 75, 55);
+  ctx.fillStyle = '#aa8855';
+  ctx.fillRect(65, 215, 65, 45);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 8px Courier New';
+  ctx.fillText('JANJETINA', 97, 242);
+
+  // Zidne svjetiljke (baklje/fenjeri)
+  const drawLantern = (x, y) => {
+    ctx.fillStyle = '#e89c38';
+    ctx.shadowColor = '#ffaa33';
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  };
+  drawLantern(180, 210);
+  drawLantern(720, 210);
+
+  // Karirani pod kafane u 3D perspektivi
+  const floorTopY = 310;
+  const floorPoly = new Path2D();
+  floorPoly.moveTo(220, floorTopY);
+  floorPoly.lineTo(680, floorTopY);
+  floorPoly.lineTo(W, H);
+  floorPoly.lineTo(0, H);
+  floorPoly.closePath();
+
+  ctx.save();
+  ctx.clip(floorPoly);
+  ctx.fillStyle = '#161012';
+  ctx.fillRect(0, floorTopY, W, H - floorTopY);
+
+  const numRows = 12;
+  const numCols = 8;
+  for (let r = 0; r < numRows; r++) {
+    const t0 = Math.pow(r / numRows, 2.0);
+    const t1 = Math.pow((r + 1) / numRows, 2.0);
+    const y0 = floorTopY + (H - floorTopY) * t0;
+    const y1 = floorTopY + (H - floorTopY) * t1;
+
+    const rowLX0 = 220 * (1 - t0);
+    const rowRX0 = 680 + (W - 680) * t0;
+    const rowLX1 = 220 * (1 - t1);
+    const rowRX1 = 680 + (W - 680) * t1;
+
+    for (let c = 0; c < numCols; c++) {
+      if ((r + c) % 2 === 0) {
+        ctx.fillStyle = '#5c1920'; // Tradicionalna kafanska crvena pločica
+        ctx.beginPath();
+        ctx.moveTo(rowLX0 + (rowRX0 - rowLX0) * (c / numCols), y0);
+        ctx.lineTo(rowLX0 + (rowRX0 - rowLX0) * ((c + 1) / numCols), y0);
+        ctx.lineTo(rowLX1 + (rowRX1 - rowLX1) * ((c + 1) / numCols), y1);
+        ctx.lineTo(rowLX1 + (rowRX1 - rowLX1) * (c / numCols), y1);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
+
+  // 3D OKRUGLI STOLOVI S KARIRANIM STOLNJACIMA
+  const drawDiningTable = (cx, cy, radius, scale) => {
+    // Sjena stola na podu
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + radius * 0.9, radius * 1.15, radius * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Stolice u pozadini
+    ctx.fillStyle = '#3b2214';
+    ctx.fillRect(cx - radius * 0.8, cy - radius * 0.9, radius * 0.35, radius * 0.65);
+    ctx.fillRect(cx + radius * 0.45, cy - radius * 0.9, radius * 0.35, radius * 0.65);
+
+    // Spušteni rub kariranog stolnjaka
+    ctx.fillStyle = '#8f1d24';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + radius * 0.4, radius * 0.95, radius * 0.6, 0, 0, Math.PI);
+    ctx.fill();
+
+    // Gornja ploha stola sa stolnjakom
+    ctx.fillStyle = '#f2ebe4';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, radius, radius * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Crveno-bijeli karirani uzorak stolnjaka
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = 'rgba(180, 20, 30, 0.65)';
+    const gridStep = 10 * scale;
+    for (let gx = cx - radius; gx <= cx + radius; gx += gridStep * 2) {
+      ctx.fillRect(gx, cy - radius, gridStep, radius * 2);
+    }
+    for (let gy = cy - radius; gy <= cy + radius; gy += gridStep * 2) {
+      ctx.fillRect(cx - radius, gy, radius * 2, gridStep);
+    }
+    ctx.restore();
+
+    // Predmeti na stolu: Svijeća u čaši i boca piva
+    ctx.fillStyle = '#c79134';
+    ctx.fillRect(cx - 5 * scale, cy - 28 * scale, 9 * scale, 22 * scale);
+    ctx.fillStyle = '#225522';
+    ctx.fillRect(cx + 12 * scale, cy - 32 * scale, 7 * scale, 26 * scale);
+    ctx.restore();
+  };
+
+  // Stražnji stolovi (daljina)
+  drawDiningTable(320, 370, 38, 0.6);
+  drawDiningTable(580, 370, 38, 0.6);
+
+  // Srednji stolovi
+  drawDiningTable(240, 465, 58, 0.85);
+  drawDiningTable(660, 465, 58, 0.85);
+
+  // Prednji stolovi (krupni plan u dnu ekrana)
+  drawDiningTable(180, 600, 84, 1.15);
+  drawDiningTable(720, 600, 84, 1.15);
+
+  // Viseće tvorničke zelene svjetiljke sa stropa
+  [280, 450, 620].forEach(lx => {
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lx, 0); ctx.lineTo(lx, 110);
+    ctx.stroke();
+
+    ctx.fillStyle = '#1b3b22';
+    ctx.beginPath();
+    ctx.arc(lx, 115, 20, Math.PI, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Svjetlosni stožac lampe
+    const cone = ctx.createRadialGradient(lx, 120, 10, lx, 320, 190);
+    cone.addColorStop(0, 'rgba(255, 235, 170, 0.28)');
+    cone.addColorStop(1, 'transparent');
+    ctx.fillStyle = cone;
+    ctx.beginPath();
+    ctx.moveTo(lx, 120);
+    ctx.lineTo(lx - 120, 380);
+    ctx.lineTo(lx + 120, 380);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+// 3. CAM 2B: LIJEVI KUT PRED UREDOM (WEST CORNER)
+function drawWestCornerCAM2B(ctx) {
+  const W = 900, H = 720;
+  const vx = 660, vy = 270;
+
+  ctx.save();
+  ctx.fillStyle = '#060709';
+  ctx.fillRect(0, 0, W, H);
+
+  // Lijevi zid (glavni armirani beton pred uredom)
+  const wallGrad = ctx.createLinearGradient(0, 0, vx, 0);
+  wallGrad.addColorStop(0, '#1a1f26');
+  wallGrad.addColorStop(1, '#0e1115');
+  ctx.fillStyle = wallGrad;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(vx, 150);
+  ctx.lineTo(vx, 390);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Sigurnosne žuto-crne dijagonalne pruge upozorenja
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, 360);
+  ctx.lineTo(vx, 310);
+  ctx.lineTo(vx, 360);
+  ctx.lineTo(0, 420);
+  ctx.closePath();
+  ctx.clip();
+  for (let x = -50; x < vx + 50; x += 32) {
+    ctx.fillStyle = (x / 32) % 2 === 0 ? '#ffcc00' : '#111';
+    ctx.beginPath();
+    ctx.moveTo(x, 280);
+    ctx.lineTo(x + 28, 280);
+    ctx.lineTo(x - 20, 450);
+    ctx.lineTo(x - 48, 450);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Desni hodnik koji bježi iza ugla
+  ctx.fillStyle = '#090b0e';
+  ctx.beginPath();
+  ctx.moveTo(vx, 150);
+  ctx.lineTo(W, 80);
+  ctx.lineTo(W, 490);
+  ctx.lineTo(vx, 390);
+  ctx.closePath();
+  ctx.fill();
+
+  // Karirani pod s mrljama i kablovima
+  const floorPoly = new Path2D();
+  floorPoly.moveTo(0, H);
+  floorPoly.lineTo(0, 420);
+  floorPoly.lineTo(vx, 390);
+  floorPoly.lineTo(W, 490);
+  floorPoly.lineTo(W, H);
+  floorPoly.closePath();
+
+  ctx.save();
+  ctx.clip(floorPoly);
+  ctx.fillStyle = '#111418';
+  ctx.fillRect(0, 390, W, H - 390);
+  // Rešetka pločica
+  ctx.strokeStyle = '#1d232c';
+  ctx.lineWidth = 2;
+  for (let x = 0; x < W; x += 70) {
+    ctx.beginPath();
+    ctx.moveTo(x, 390); ctx.lineTo(x * 1.6 - 150, H); ctx.stroke();
+  }
+  for (let y = 390; y < H; y += 45) {
+    ctx.beginPath();
+    ctx.moveTo(0, y); ctx.lineTo(W, y * 0.95 + 30); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Prednji lijevi otvor vrata ureda (okvir se vidi na kameri)
+  ctx.fillStyle = '#2d333d';
+  ctx.fillRect(0, 80, 85, H - 80);
+  ctx.strokeStyle = '#12151a';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(0, 80, 85, H - 80);
+
+  // Plakat upozorenja
+  ctx.fillStyle = '#eeddbb';
+  ctx.fillRect(180, 190, 95, 125);
+  ctx.fillStyle = '#990000';
+  ctx.font = 'bold 11px Courier New';
+  ctx.fillText('PAZI!', 227, 215);
+  ctx.fillStyle = '#111';
+  ctx.font = '8px Courier New';
+  ctx.fillText('LIJEVA VRATA', 227, 238);
+  ctx.fillText('UREDA SU', 227, 252);
+  ctx.fillText('ODMAH TU!', 227, 266);
+
+  // Viseća žarulja u kavezu koja treperi
+  const bulbFlicker = Math.sin(Date.now() * 0.015) > -0.2;
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(420, 0); ctx.lineTo(420, 130);
+  ctx.stroke();
+
+  ctx.fillStyle = bulbFlicker ? '#ffaa33' : '#443322';
+  ctx.shadowColor = bulbFlicker ? '#ff9900' : 'transparent';
+  ctx.shadowBlur = bulbFlicker ? 24 : 0;
+  ctx.beginPath();
+  ctx.arc(420, 135, 11, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+}
+
+// 4. CAM 3: ŠPAJZA S GAJBAMA PIVA (SUPPLY CLOSET)
+function drawSupplyClosetCAM3(ctx) {
+  const W = 900, H = 720;
+  const vx = 450, vy = 310;
+
+  ctx.save();
+  ctx.fillStyle = '#050708';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stražnji zid uske špajze
+  ctx.fillStyle = '#0e1216';
+  ctx.fillRect(340, 160, 220, 240);
+
+  // Cijev sa stropa i kapljica vode
+  ctx.strokeStyle = '#4a3319';
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(340, 200); ctx.lineTo(560, 200);
+  ctx.stroke();
+
+  const dropTime = (Date.now() * 0.4) % 220;
+  ctx.fillStyle = '#77ccee';
+  ctx.beginPath();
+  ctx.arc(450, 205 + dropTime, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Betonski pod s rešetkom odvoda
+  const floorPoly = new Path2D();
+  floorPoly.moveTo(340, 400);
+  floorPoly.lineTo(560, 400);
+  floorPoly.lineTo(W, H);
+  floorPoly.lineTo(0, H);
+  floorPoly.closePath();
+
+  ctx.save();
+  ctx.clip(floorPoly);
+  ctx.fillStyle = '#181d22';
+  ctx.fillRect(0, 400, W, H - 400);
+  // Rešetka odvoda
+  ctx.fillStyle = '#080a0c';
+  ctx.beginPath();
+  ctx.ellipse(450, 560, 48, 20, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2;
+  for (let l = 415; l <= 485; l += 8) {
+    ctx.beginPath();
+    ctx.moveTo(l, 545); ctx.lineTo(l, 575); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Čelične police s gajbama piva i teglama ajvara s obje strane
+  const drawShelvingUnit = (isLeft) => {
+    const rx = isLeft ? 0 : 620;
+    const rw = 280;
+
+    // Stupovi police
+    ctx.fillStyle = '#222830';
+    ctx.fillRect(isLeft ? 260 : 620, 60, 16, H);
+    ctx.fillRect(isLeft ? 50 : 850, 30, 20, H);
+
+    // Vodoravne police
+    [240, 360, 480, 600].forEach((sy, idx) => {
+      ctx.fillStyle = '#2d3540';
+      ctx.fillRect(rx, sy, rw, 14);
+
+      // Gajbe piva na polici
+      const crateColors = ['#e6b800', '#228833', '#cc2222', '#e6b800'];
+      const crateNames  = ['OŽUJSKO', 'KARLOV', 'JELEN', 'OŽUJSKO'];
+      for (let c = 0; c < 2; c++) {
+        const cx = isLeft ? (60 + c * 95) : (640 + c * 95);
+        ctx.fillStyle = crateColors[(idx + c) % 4];
+        ctx.fillRect(cx, sy - 52, 85, 52);
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx, sy - 52, 85, 52);
+
+        // Grlići boca
+        ctx.fillStyle = '#3a2211';
+        for (let b = 0; b < 4; b++) {
+          ctx.fillRect(cx + 8 + b * 19, sy - 64, 9, 14);
+        }
+
+        // Natpis na gajbi
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 9px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText(crateNames[(idx + c) % 4], cx + 42, sy - 24);
+      }
+
+      // Tegle ajvara i kiselih krastavaca na gornjoj polici
+      if (idx === 0) {
+        for (let j = 0; j < 3; j++) {
+          const jx = isLeft ? (80 + j * 50) : (660 + j * 50);
+          ctx.fillStyle = j % 2 === 0 ? '#b32400' : '#2b5e28'; // Ajvar ili krastavci
+          ctx.fillRect(jx, sy - 34, 28, 34);
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(jx + 4, sy - 24, 20, 14); // Bijela naljepnica
+          ctx.fillStyle = '#eee';
+          ctx.fillRect(jx + 2, sy - 40, 24, 7);  // Poklopac
+        }
+      }
+    });
+  };
+  drawShelvingUnit(true);
+  drawShelvingUnit(false);
+
+  // Viseća žarulja koja se lagano njiše u prostoru
+  const swingX = Math.sin(Date.now() * 0.002) * 12;
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(450, 0);
+  ctx.lineTo(450 + swingX, 220);
+  ctx.stroke();
+
+  // Svjetleća žarulja
+  ctx.fillStyle = '#ffcc44';
+  ctx.shadowColor = '#ffaa00';
+  ctx.shadowBlur = 35;
+  ctx.beginPath();
+  ctx.arc(450 + swingX, 225, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Stožac svjetla po podu
+  const lightCone = ctx.createRadialGradient(450 + swingX, 560, 20, 450 + swingX, 560, 220);
+  lightCone.addColorStop(0, 'rgba(255, 210, 100, 0.35)');
+  lightCone.addColorStop(1, 'transparent');
+  ctx.fillStyle = lightCone;
+  ctx.beginPath();
+  ctx.ellipse(450 + swingX, 560, 220, 75, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// 5. CAM 4A: DESNI HODNIK (EAST HALLWAY)
+function drawEastHallwayCAM4A(ctx) {
+  const W = 900, H = 720;
+  const vx = 450, vy = 270;
+
+  ctx.save();
+  ctx.fillStyle = '#060709';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stražnji zid s dvokrilnim vratima za kuhinju
+  ctx.fillStyle = '#0f1318';
+  ctx.fillRect(360, 180, 180, 180);
+
+  ctx.fillStyle = '#1c242e';
+  ctx.fillRect(380, 215, 65, 145);
+  ctx.fillRect(455, 215, 65, 145);
+  ctx.strokeStyle = '#333f4d';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(380, 215, 65, 145);
+  ctx.strokeRect(455, 215, 65, 145);
+  // Prozorčići na vratima
+  ctx.fillStyle = '#ffaa33';
+  ctx.fillRect(400, 240, 25, 38);
+  ctx.fillRect(475, 240, 25, 38);
+
+  // Lijevi zid (ventilacija i instalacije)
+  const leftGrad = ctx.createLinearGradient(0, 0, 360, 0);
+  leftGrad.addColorStop(0, '#151921');
+  leftGrad.addColorStop(1, '#0c0f14');
+  ctx.fillStyle = leftGrad;
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(360, 180);
+  ctx.lineTo(360, 360); ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Velika ventilacijska cijev uzduž lijevog stropa
+  ctx.fillStyle = '#2c333d';
+  ctx.beginPath();
+  ctx.moveTo(0, 45); ctx.lineTo(360, 195);
+  ctx.lineTo(360, 225); ctx.lineTo(0, 95);
+  ctx.closePath();
+  ctx.fill();
+
+  // Desni zid: Zid slave (YouTube Play Buttons i dječji crteži)
+  const rightGrad = ctx.createLinearGradient(W, 0, 540, 0);
+  rightGrad.addColorStop(0, '#1a1f26');
+  rightGrad.addColorStop(1, '#0e1115');
+  ctx.fillStyle = rightGrad;
+  ctx.beginPath();
+  ctx.moveTo(W, 0); ctx.lineTo(540, 180);
+  ctx.lineTo(540, 360); ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Silver & Gold Play Button okviri
+  const drawPlayButton = (x, y, w, h, isGold) => {
+    ctx.fillStyle = isGold ? '#d4af37' : '#c0c0c0';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+    ctx.fillStyle = isGold ? '#ffd700' : '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.42, y + h * 0.35);
+    ctx.lineTo(x + w * 0.65, y + h * 0.5);
+    ctx.lineTo(x + w * 0.42, y + h * 0.65);
+    ctx.closePath();
+    ctx.fill();
+  };
+  drawPlayButton(630, 240, 55, 68, true);   // Gold
+  drawPlayButton(740, 260, 75, 95, false);  // Silver
+
+  // Dječji crteži s jezivim porukama zalijepljeni na zidu
+  ctx.fillStyle = '#fffdf0';
+  ctx.fillRect(660, 360, 70, 55);
+  ctx.fillStyle = '#cc2222';
+  ctx.font = 'bold 9px Courier New';
+  ctx.fillText('NEMA STRUJE', 695, 385);
+  ctx.fillStyle = '#222';
+  ctx.fillText('POMOZI!', 695, 402);
+
+  // Polirani karirani pod u perspektivi
+  const floorTopY = 360;
+  const floorPoly = new Path2D();
+  floorPoly.moveTo(360, floorTopY);
+  floorPoly.lineTo(540, floorTopY);
+  floorPoly.lineTo(W, H);
+  floorPoly.lineTo(0, H);
+  floorPoly.closePath();
+
+  ctx.save();
+  ctx.clip(floorPoly);
+  ctx.fillStyle = '#0e1114';
+  ctx.fillRect(0, floorTopY, W, H - floorTopY);
+
+  const numRows = 12;
+  const numCols = 8;
+  for (let r = 0; r < numRows; r++) {
+    const t0 = Math.pow(r / numRows, 2.1);
+    const t1 = Math.pow((r + 1) / numRows, 2.1);
+    const y0 = floorTopY + (H - floorTopY) * t0;
+    const y1 = floorTopY + (H - floorTopY) * t1;
+
+    const rowLX0 = 360 * (1 - t0);
+    const rowRX0 = 540 + (W - 540) * t0;
+    const rowLX1 = 360 * (1 - t1);
+    const rowRX1 = 540 + (W - 540) * t1;
+
+    for (let c = 0; c < numCols; c++) {
+      if ((r + c) % 2 === 0) {
+        ctx.fillStyle = '#1c2229';
+        ctx.beginPath();
+        ctx.moveTo(rowLX0 + (rowRX0 - rowLX0) * (c / numCols), y0);
+        ctx.lineTo(rowLX0 + (rowRX0 - rowLX0) * ((c + 1) / numCols), y0);
+        ctx.lineTo(rowLX1 + (rowRX1 - rowLX1) * ((c + 1) / numCols), y1);
+        ctx.lineTo(rowLX1 + (rowRX1 - rowLX1) * (c / numCols), y1);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
+
+  // Neonska rasvjeta duž stropa (jedna treperi)
+  [0.25, 0.55, 0.85].forEach((t, idx) => {
+    const lw = 25 + t * 65;
+    const ly = 35 + t * (floorTopY - 180 - 35);
+    const flicker = idx === 1 ? Math.sin(Date.now() * 0.02) > 0 : true;
+    ctx.fillStyle = flicker ? '#f2fcff' : '#222830';
+    ctx.fillRect(vx - lw / 2, ly, lw, 8 + t * 4);
+  });
+
+  ctx.restore();
+}
+
+// 6. CAM 4B: DESNI KUT PRED UREDOM (EAST CORNER)
+function drawEastCornerCAM4B(ctx) {
+  const W = 900, H = 720;
+  const vx = 240, vy = 270;
+
+  ctx.save();
+  ctx.fillStyle = '#050709';
+  ctx.fillRect(0, 0, W, H);
+
+  // Desni zid koji vodi ravno pred desna vrata ureda
+  const wallGrad = ctx.createLinearGradient(W, 0, vx, 0);
+  wallGrad.addColorStop(0, '#1c2129');
+  wallGrad.addColorStop(1, '#0e1115');
+  ctx.fillStyle = wallGrad;
+  ctx.beginPath();
+  ctx.moveTo(W, 0);
+  ctx.lineTo(vx, 150);
+  ctx.lineTo(vx, 390);
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Sigurnosna žuto-crna traka
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(W, 360);
+  ctx.lineTo(vx, 310);
+  ctx.lineTo(vx, 360);
+  ctx.lineTo(W, 420);
+  ctx.closePath();
+  ctx.clip();
+  for (let x = vx - 50; x < W + 50; x += 32) {
+    ctx.fillStyle = (x / 32) % 2 === 0 ? '#ffcc00' : '#111';
+    ctx.beginPath();
+    ctx.moveTo(x, 280);
+    ctx.lineTo(x + 28, 280);
+    ctx.lineTo(x + 48, 450);
+    ctx.lineTo(x + 20, 450);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Lijevi hodnik koji bježi iza ugla
+  ctx.fillStyle = '#080a0c';
+  ctx.beginPath();
+  ctx.moveTo(vx, 150);
+  ctx.lineTo(0, 80);
+  ctx.lineTo(0, 490);
+  ctx.lineTo(vx, 390);
+  ctx.closePath();
+  ctx.fill();
+
+  // Karirani pod s perspektivom prema desnim vratima
+  const floorPoly = new Path2D();
+  floorPoly.moveTo(W, H);
+  floorPoly.lineTo(W, 420);
+  floorPoly.lineTo(vx, 390);
+  floorPoly.lineTo(0, 490);
+  floorPoly.lineTo(0, H);
+  floorPoly.closePath();
+
+  ctx.save();
+  ctx.clip(floorPoly);
+  ctx.fillStyle = '#111418';
+  ctx.fillRect(0, 390, W, H - 390);
+  ctx.strokeStyle = '#1d232c';
+  ctx.lineWidth = 2;
+  for (let x = 0; x < W; x += 70) {
+    ctx.beginPath();
+    ctx.moveTo(x, 390); ctx.lineTo(x * 1.5 - 200, H); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Prednji desni okvir desnih vrata ureda (vide se na kameri)
+  ctx.fillStyle = '#2d333d';
+  ctx.fillRect(W - 90, 80, 90, H - 80);
+  ctx.strokeStyle = '#12151a';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(W - 90, 80, 90, H - 80);
+
+  // Vatrogasni aparat na zidu
+  ctx.fillStyle = '#cc1111';
+  ctx.beginPath();
+  ctx.roundRect(580, 220, 34, 90, 10);
+  ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.fillRect(592, 205, 10, 16);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(585, 255, 24, 28);
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 7px Courier New';
+  ctx.fillText('POŽAR', 597, 272);
+
+  // Visokonaponski ormarić
+  ctx.fillStyle = '#333b47';
+  ctx.fillRect(440, 190, 68, 85);
+  ctx.strokeStyle = '#ffcc00';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(440, 190, 68, 85);
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = 'bold 8px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('⚡ 380V ⚡', 474, 215);
+
+  ctx.restore();
+}
+
+// 7. CAM 5: BACKSTAGE & KAZETOFON (PUPPET TAPE MEHANIKA)
+function drawBackstageCAM5(ctx) {
+  const W = 900, H = 720;
+  const vx = 450, vy = 250;
+
+  ctx.save();
+  ctx.fillStyle = '#08090c';
+  ctx.fillRect(0, 0, W, H);
+
+  // Zidovi s piramidalnom zvučnom pjenom
+  ctx.fillStyle = '#14181f';
+  ctx.fillRect(180, 90, 540, 240);
+  // Rešetka zvučne izolacije
+  ctx.strokeStyle = '#0e1115';
+  ctx.lineWidth = 2;
+  for (let x = 180; x < 720; x += 25) {
+    ctx.beginPath(); ctx.moveTo(x, 90); ctx.lineTo(x, 330); ctx.stroke();
+  }
+  for (let y = 90; y < 330; y += 25) {
+    ctx.beginPath(); ctx.moveTo(180, y); ctx.lineTo(720, y); ctx.stroke();
+  }
+
+  // Veliki koncertni zvučnički stupovi na bokovima
+  ctx.fillStyle = '#111';
+  ctx.fillRect(40, 180, 110, 290);
+  ctx.fillRect(750, 180, 110, 290);
+  ctx.fillStyle = '#222';
+  for (let s = 0; s < 3; s++) {
+    ctx.beginPath(); ctx.arc(95, 230 + s * 85, 34, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(805, 230 + s * 85, 34, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Rezervni dijelovi animatronika na polici u sjeni
+  ctx.fillStyle = '#3a2012';
+  ctx.fillRect(210, 240, 480, 12);
+  ctx.fillStyle = '#666';
+  // Prazna glava robota s crnim očnim dupljama
+  ctx.beginPath();
+  ctx.arc(280, 215, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(274, 212, 5, 0, Math.PI * 2);
+  ctx.arc(286, 212, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 3D STOL S KAZETOFONOM U PRVOM PLANU
+  const tableTopY = 440;
+  ctx.fillStyle = '#222832';
+  ctx.beginPath();
+  ctx.moveTo(160, tableTopY);
+  ctx.lineTo(740, tableTopY);
+  ctx.lineTo(820, 620);
+  ctx.lineTo(80, 620);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#445163';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Prednja fronta stola
+  ctx.fillStyle = '#14181f';
+  ctx.fillRect(80, 620, 740, 100);
+
+  // RETRO KAZETOFON (BOOMBOX) NA STOLU
+  const boxX = 310;
+  const boxY = 415;
+  const boxW = 280;
+  const boxH = 145;
+
+  ctx.fillStyle = '#484f59';
+  ctx.beginPath();
+  ctx.roundRect(boxX, boxY, boxW, boxH, 10);
+  ctx.fill();
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Zvučnici kazetofona
+  ctx.fillStyle = '#1a1d22';
+  ctx.beginPath();
+  ctx.arc(boxX + 50, boxY + 75, 38, 0, Math.PI * 2);
+  ctx.arc(boxX + boxW - 50, boxY + 75, 38, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Prozor kazete sa zupčanicima koji se okreću!
+  ctx.fillStyle = '#0a0c0e';
+  ctx.fillRect(boxX + 105, boxY + 38, 70, 72);
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(boxX + 105, boxY + 38, 70, 72);
+
+  const tapeSpin = state.windingTape ? (Date.now() * 0.035) : (Date.now() * 0.005);
+  const drawReel = (rx, ry) => {
+    ctx.save();
+    ctx.translate(rx, ry);
+    ctx.rotate(tapeSpin);
+    ctx.fillStyle = '#f0f0f0';
+    ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#222';
+    for (let sp = 0; sp < 3; sp++) {
+      ctx.beginPath();
+      ctx.arc(Math.cos(sp * 2.1) * 7, Math.sin(sp * 2.1) * 7, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  };
+  drawReel(boxX + 124, boxY + 74);
+  drawReel(boxX + 156, boxY + 74);
+
+  // Crveni statusni indikator na kazetofonu
+  const tapeWarn = state.tapeCharge < 30;
+  ctx.fillStyle = tapeWarn && (Math.sin(Date.now() * 0.015) > 0) ? '#ff2222' : '#33ff55';
+  ctx.beginPath();
+  ctx.arc(boxX + 140, boxY + 22, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // PUPPET / TAJNI DONATOR POJAVLJIVANJE IZA STOLA
+  if (state.tapeCharge < 55 && !state.entities.puppet.released) {
+    const riseProg = Math.min(1.0, (55 - state.tapeCharge) / 45); // 0 do 1
+    const pupY = 410 - riseProg * 110;
+    const pupR = 52 + riseProg * 35;
+
+    // Bijela maska s ljubičastim suzama
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(vx, pupY, pupR * 0.72, pupR, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Crne prazne oči i suze
+    ctx.fillStyle = '#050505';
+    ctx.beginPath();
+    ctx.ellipse(vx - pupR * 0.32, pupY - pupR * 0.15, pupR * 0.18, pupR * 0.28, 0, 0, Math.PI * 2);
+    ctx.ellipse(vx + pupR * 0.32, pupY - pupR * 0.15, pupR * 0.18, pupR * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ljubičaste pruge suza
+    ctx.fillStyle = '#6b1b8a';
+    ctx.fillRect(vx - pupR * 0.36, pupY, pupR * 0.1, pupR * 0.7);
+    ctx.fillRect(vx + pupR * 0.26, pupY, pupR * 0.1, pupR * 0.7);
+
+    // Crveni ruž / obrazi
+    ctx.fillStyle = '#cc1122';
+    ctx.beginPath();
+    ctx.arc(vx - pupR * 0.48, pupY + pupR * 0.28, pupR * 0.16, 0, Math.PI * 2);
+    ctx.arc(vx + pupR * 0.48, pupY + pupR * 0.28, pupR * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Užarene bijele točke u očima kad je kritično (< 20%)
+    if (state.tapeCharge < 20) {
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(vx - pupR * 0.32, pupY - pupR * 0.15, 3, 0, Math.PI * 2);
+      ctx.arc(vx + pupR * 0.32, pupY - pupR * 0.15, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// 8. CAM 6: KUHINJA & ROŠTILJ (INFRARED NIGHT-VISION 3D KITCHEN)
+function drawKitchenCAM6(ctx, someoneInKitchen) {
+  const W = 900, H = 720;
+  const vx = 450, vy = 270;
+
+  ctx.save();
+
+  // Infracrveni Night-Vision tamnozeleni filter
+  ctx.fillStyle = '#030d06';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stražnji zid sa zidanim ćevabdžijskim roštiljem
+  ctx.fillStyle = '#08170d';
+  ctx.fillRect(280, 140, 340, 210);
+
+  // Inox kuhinjski pultovi na lijevoj i desnoj strani u perspektivi
+  const drawCounter = (isLeft) => {
+    const cx0 = isLeft ? 0 : W;
+    const cx1 = isLeft ? 280 : 620;
+    ctx.fillStyle = isLeft ? '#0d2b16' : '#0a2412';
+    ctx.beginPath();
+    ctx.moveTo(cx0, 480);
+    ctx.lineTo(cx1, 350);
+    ctx.lineTo(cx1, 470);
+    ctx.lineTo(cx0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // Gornja radna ploha od nehrđajućeg čelika
+    ctx.fillStyle = '#154022';
+    ctx.beginPath();
+    ctx.moveTo(cx0, 430);
+    ctx.lineTo(cx1, 320);
+    ctx.lineTo(cx1, 350);
+    ctx.lineTo(cx0, 480);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#227038';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  };
+  drawCounter(true);
+  drawCounter(false);
+
+  // Viseće tave i lonci s metalne rešetke na stropu
+  ctx.strokeStyle = '#1b4a27';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(180, 90); ctx.lineTo(720, 90);
+  ctx.stroke();
+
+  [240, 340, 560, 660].forEach((px, idx) => {
+    ctx.beginPath();
+    ctx.moveTo(px, 90); ctx.lineTo(px, 140);
+    ctx.stroke();
+    ctx.fillStyle = '#0d2b16';
+    ctx.beginPath();
+    ctx.arc(px, 160, 18 + (idx % 2) * 8, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // ĆEVABDŽIJSKI ROŠTILJ U SREDINI (UŽARENI UGLJEN I ĆEVAPI)
+  const grillX = 330;
+  const grillY = 320;
+  const grillW = 240;
+  const grillH = 110;
+
+  ctx.fillStyle = '#110705';
+  ctx.fillRect(grillX, grillY, grillW, grillH);
+  ctx.strokeStyle = '#441808';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(grillX, grillY, grillW, grillH);
+
+  // Užareni ugljen (Orange/Red embers)
+  const emberPulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.005);
+  ctx.fillStyle = `rgba(255, 60, 10, ${emberPulse * 0.85})`;
+  ctx.fillRect(grillX + 10, grillY + 25, grillW - 20, grillH - 35);
+
+  // Rešetka roštilja
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2.5;
+  for (let gx = grillX + 16; gx < grillX + grillW - 10; gx += 14) {
+    ctx.beginPath();
+    ctx.moveTo(gx, grillY + 15); ctx.lineTo(gx, grillY + grillH - 8); ctx.stroke();
+  }
+
+  // Ćevapi koji cvrče na roštilju!
+  ctx.fillStyle = '#4a2512';
+  for (let c = 0; c < 10; c++) {
+    const cx = grillX + 22 + (c % 5) * 42;
+    const cy = grillY + 35 + Math.floor(c / 5) * 32;
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, 28, 10, 4);
+    ctx.fill();
+  }
+
+  // Dim i iskre koje se dižu s roštilja
+  for (let s = 0; s < 6; s++) {
+    const smokeOffset = ((Date.now() * 0.05 + s * 45) % 160);
+    ctx.fillStyle = 'rgba(255, 120, 40, 0.25)';
+    ctx.beginPath();
+    ctx.arc(grillX + 40 + s * 32, grillY - smokeOffset, 6 + smokeOffset * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // SILUETA LIKA PREKO ROŠTILJA AKO JE U KUHINJI (CHODA ILI MUĐA)
+  if (someoneInKitchen) {
+    const chId = state.entities.choda.loc === '6' ? 'choda' : 'mudja';
+    const ch = getCharById(chId);
+
+    ctx.save();
+    // Toplinska / infracrvena fluorescentna silueta
+    ctx.fillStyle = '#ffaa33';
+    ctx.shadowColor = '#ff5500';
+    ctx.shadowBlur = 24;
+
+    // Tijelo
+    ctx.beginPath();
+    ctx.ellipse(vx, 305, 54, 75, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glava
+    ctx.beginPath();
+    ctx.arc(vx, 205, 44, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Užarene oči
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(vx - 14, 198, 5, 0, Math.PI * 2);
+    ctx.arc(vx + 14, 198, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hvataljka za ćevape / nož u ruci
+    ctx.strokeStyle = '#ffff55';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(vx + 45, 275);
+    ctx.lineTo(vx + 85, 345);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // Zvučna notifikacija
+    ctx.fillStyle = '#33ff55';
+    ctx.font = 'bold 20px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(`🔊 [${ch.name.toUpperCase()} CVRČI ĆEVAPE I LUPA LONCIMA!]`, vx, H - 45);
+  } else {
+    ctx.fillStyle = '#55aa66';
+    ctx.font = 'bold 15px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('● INFRACRVENI NIGHT-VISION FEED // KUHINJA PRAZNA', vx, H - 45);
+  }
+
+  // Scanlines night-visiona
+  ctx.fillStyle = 'rgba(0, 255, 100, 0.04)';
+  for (let y = 0; y < H; y += 4) {
+    ctx.fillRect(0, y, W, 2);
+  }
+
+  ctx.restore();
+}
+
+// 9. CAM 7: TOALETI KAFANE (RESTROOMS)
+function drawRestroomsCAM7(ctx) {
+  const W = 900, H = 720;
+  const vx = 450, vy = 270;
+
+  ctx.save();
+  ctx.fillStyle = '#060a08';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stražnji zid toaleta
+  ctx.fillStyle = '#0d1713';
+  ctx.fillRect(320, 160, 260, 200);
+
+  // Prljave bijelo-zelene pločice s fugama na stražnjem zidu
+  ctx.strokeStyle = '#08100c';
+  ctx.lineWidth = 1.5;
+  for (let x = 320; x < 580; x += 26) {
+    ctx.beginPath(); ctx.moveTo(x, 160); ctx.lineTo(x, 360); ctx.stroke();
+  }
+  for (let y = 160; y < 360; y += 26) {
+    ctx.beginPath(); ctx.moveTo(320, y); ctx.lineTo(580, y); ctx.stroke();
+  }
+
+  // Mokri karirani pod u perspektivi
+  const floorTopY = 360;
+  const floorPoly = new Path2D();
+  floorPoly.moveTo(320, floorTopY);
+  floorPoly.lineTo(580, floorTopY);
+  floorPoly.lineTo(W, H);
+  floorPoly.lineTo(0, H);
+  floorPoly.closePath();
+
+  ctx.save();
+  ctx.clip(floorPoly);
+  ctx.fillStyle = '#0f1a14';
+  ctx.fillRect(0, floorTopY, W, H - floorTopY);
+
+  const numRows = 12;
+  const numCols = 8;
+  for (let r = 0; r < numRows; r++) {
+    const t0 = Math.pow(r / numRows, 2.0);
+    const t1 = Math.pow((r + 1) / numRows, 2.0);
+    const y0 = floorTopY + (H - floorTopY) * t0;
+    const y1 = floorTopY + (H - floorTopY) * t1;
+
+    const rowLX0 = 320 * (1 - t0);
+    const rowRX0 = 580 + (W - 580) * t0;
+    const rowLX1 = 320 * (1 - t1);
+    const rowRX1 = 580 + (W - 580) * t1;
+
+    for (let c = 0; c < numCols; c++) {
+      if ((r + c) % 2 === 0) {
+        ctx.fillStyle = '#1c3629';
+        ctx.beginPath();
+        ctx.moveTo(rowLX0 + (rowRX0 - rowLX0) * (c / numCols), y0);
+        ctx.lineTo(rowLX0 + (rowRX0 - rowLX0) * ((c + 1) / numCols), y0);
+        ctx.lineTo(rowLX1 + (rowRX1 - rowLX1) * ((c + 1) / numCols), y1);
+        ctx.lineTo(rowLX1 + (rowRX1 - rowLX1) * (c / numCols), y1);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  }
+
+  // Vodene lokve na podu
+  ctx.fillStyle = 'rgba(100, 255, 180, 0.12)';
+  ctx.beginPath();
+  ctx.ellipse(450, 520, 110, 32, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // LIJEVA STRANA: 3 WC KABINE U PERSPEKTIVI S GRAFITIMA
+  const drawStall = (sx0, sx1, sy0, sy1, label) => {
+    ctx.fillStyle = '#3b281c';
+    ctx.beginPath();
+    ctx.moveTo(sx0, 0); ctx.lineTo(sx1, sy0);
+    ctx.lineTo(sx1, sy1); ctx.lineTo(sx0, H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#1b120c';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Kvaka i indikator
+    ctx.fillStyle = '#cc2222';
+    ctx.beginPath();
+    ctx.arc((sx0 + sx1) / 2, (sy0 + sy1) / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Grafiti
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.font = 'bold 9px Courier New';
+    ctx.fillText(label, (sx0 + sx1) / 2, (sy0 + sy1) / 2 - 35);
+  };
+  drawStall(0, 150, 80, 480, 'MILE BOG');
+  drawStall(150, 240, 120, 410, 'BEŽI!');
+  drawStall(240, 320, 160, 360, 'WC 3');
+
+  // DESNA STRANA: UMIVAONICI I NAPUKNUTO OGLEDALO
+  ctx.fillStyle = '#112219';
+  ctx.beginPath();
+  ctx.moveTo(W, 0); ctx.lineTo(580, 160);
+  ctx.lineTo(580, 360); ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Veliko napuknuto ogledalo iznad umivaonika
+  ctx.fillStyle = '#263b32';
+  ctx.beginPath();
+  ctx.moveTo(850, 140); ctx.lineTo(620, 190);
+  ctx.lineTo(620, 330); ctx.lineTo(850, 380);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#668877';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Paučina pukotina na staklu ogledala
+  ctx.strokeStyle = '#aaeedd';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(730, 260); ctx.lineTo(690, 220);
+  ctx.moveTo(730, 260); ctx.lineTo(790, 230);
+  ctx.moveTo(730, 260); ctx.lineTo(740, 320);
+  ctx.stroke();
+
+  // Porculanski umivaonici
+  [0.35, 0.75].forEach(t => {
+    const sinkX = 580 + (W - 580) * t;
+    const sinkY = 360 + (H - 360) * t * 0.75;
+    ctx.fillStyle = '#e8f0ec';
+    ctx.beginPath();
+    ctx.ellipse(sinkX - 25, sinkY, 34, 18, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#888';
+    ctx.fillRect(sinkX - 28, sinkY - 26, 6, 16); // Slavina
+  });
+
+  // Žuti plastični stožac "PAZI: KLIZAV POD" u prvom planu
+  ctx.fillStyle = '#e6c300';
+  ctx.beginPath();
+  ctx.moveTo(480, 520);
+  ctx.lineTo(505, 595);
+  ctx.lineTo(455, 595);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 8px Courier New';
+  ctx.fillText('WET FLOOR', 480, 575);
+
+  // Treperava neonska cijev na stropu
+  const neonBlink = Math.sin(Date.now() * 0.02) > -0.3;
+  ctx.fillStyle = neonBlink ? '#cceeff' : '#1a2924';
+  ctx.shadowColor = neonBlink ? '#88ccff' : 'transparent';
+  ctx.shadowBlur = neonBlink ? 20 : 0;
+  ctx.fillRect(vx - 50, 45, 100, 7);
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+}
 
 // ============================================================================
 // ANIMACIJA BJEŽANJA / SPRINTA FOXY TIPA (OMČO - CAM 1C & CAM 2A)
