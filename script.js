@@ -1657,20 +1657,20 @@ function drawDoorwayAndControls(isLeft) {
     }
   }
 
-  // Ako je upaljeno svjetlo i streamer je pred vratima – prikaži ga!
+  // Ako je upaljeno svjetlo i streamer je pred vratima – prikaži realistični model na ulazu!
   if (lightOn && !state.powerOut) {
     if (isLeft && state.entities.baka.loc === 'LEFT_DOOR') {
-      drawCharacterPortrait(ctx, getCharById('baka'), doorX + 110, doorY + 240, 68);
+      drawFullBodyAnimatronic(ctx, getCharById('baka'), doorX + 110, doorY + doorH - 25, 410, 'door', 1.0);
       drawCharacterPortrait(ctx, getCharById('baka'), winX + 68, winY + 130, 48);
       ctx.fillStyle = '#ff4444';
       ctx.font = 'bold 15px Courier New';
       ctx.textAlign = 'center';
-      ctx.fillText('"OTVARAJ, IDE GAS!"', doorX + 110, doorY + 130);
+      ctx.fillText('"OTVARAJ, IDE GAS!"', doorX + 110, doorY + 80);
     }
     if (!isLeft && (state.entities.choda.loc === 'RIGHT_DOOR' || state.entities.mudja.loc === 'RIGHT_DOOR')) {
       const chId = state.entities.mudja.loc === 'RIGHT_DOOR' ? 'mudja' : 'choda';
+      drawFullBodyAnimatronic(ctx, getCharById(chId), doorX + 110, doorY + doorH - 25, 410, 'door', 1.0);
       drawCharacterPortrait(ctx, getCharById(chId), winX + 68, winY + 125, 55);
-      drawCharacterPortrait(ctx, getCharById(chId), doorX + 110, doorY + 240, 68);
     }
   }
 
@@ -1781,35 +1781,35 @@ function renderCCTV() {
 // 3D PERSPEKTIVNE POZICIJE LIKOVA PO SOBAMA
 // ----------------------------------------------------------------------------
 const ROOM_SLOTS_3D = {
-  '1A': [ // Show Stage: fiksni raspored trija na drvenoj bini
-    { id: 'mudja', x: 450, y: 350, r: 84 },
-    { id: 'baka',  x: 295, y: 365, r: 76 },
-    { id: 'choda', x: 605, y: 365, r: 76 }
+  '1A': [ // Show Stage: tri izvođača stoje na drvenoj bini pod reflektorima
+    { id: 'mudja', groundX: 450, groundY: 465, height: 235 },
+    { id: 'baka',  groundX: 295, groundY: 475, height: 220 },
+    { id: 'choda', groundX: 605, groundY: 475, height: 220 }
   ],
-  '1B': [ // Sala kafane: stolovi i prolazi u perspektivi
-    { x: 285, y: 390, r: 70 },
-    { x: 450, y: 340, r: 58 },
-    { x: 615, y: 390, r: 70 }
+  '1B': [ // Sala kafane: stoje među stolovima u perspektivi
+    { groundX: 285, groundY: 475, height: 180 },
+    { groundX: 450, groundY: 385, height: 140 },
+    { groundX: 615, groundY: 475, height: 180 }
   ],
   '2A': [ // Lijevi hodnik kad Baka vreba
-    { x: 450, y: 380, r: 80 }
+    { groundX: 450, groundY: 535, height: 215 }
   ],
-  '2B': [ // Lijevi slijepi kut - ekstremni krupni plan pred vratima!
-    { x: 390, y: 390, r: 125 }
+  '2B': [ // Lijevi slijepi kut - stoji pred samim vratima ureda
+    { groundX: 380, groundY: 575, height: 285 }
   ],
-  '3': [ // Špajza s pivom - stoji pod njihajućom žaruljom
-    { x: 450, y: 405, r: 86 }
+  '3': [ // Špajza s pivom - stoji pod njihajućom žaruljom među gajbama
+    { groundX: 450, groundY: 545, height: 215 }
   ],
   '4A': [ // Desni hodnik
-    { x: 430, y: 345, r: 58 },
-    { x: 535, y: 425, r: 86 }
+    { groundX: 430, groundY: 425, height: 150 },
+    { groundX: 535, groundY: 535, height: 215 }
   ],
-  '4B': [ // Desni kut - krupni plan pred desnim vratima ureda
-    { x: 510, y: 390, r: 125 }
+  '4B': [ // Desni kut - krupni plan pred desnim vratima
+    { groundX: 500, groundY: 575, height: 285 }
   ],
   '7': [ // Toaleti kafane
-    { x: 355, y: 375, r: 74 },
-    { x: 555, y: 365, r: 72 }
+    { groundX: 345, groundY: 485, height: 195 },
+    { groundX: 550, groundY: 475, height: 190 }
   ]
 };
 
@@ -1834,7 +1834,6 @@ function drawCameraRoomBackground(camId) {
 }
 
 function drawCharactersOnCamera(camId) {
-  // 1C, 5 i 6 imaju integrirano 3D renderiranje likova
   if (camId === '1C' || camId === '5' || camId === '6') return;
 
   const present = [];
@@ -1844,50 +1843,23 @@ function drawCharactersOnCamera(camId) {
   if (present.length === 0) return;
 
   if (camId === '1A') {
-    // Glavna bina - svaki streamer ima svoje fiksno mjesto
+    // Glavna bina - tri izvođača stoje uspravno na bini s punim tijelom pod reflektorima
     present.forEach(id => {
       const ch = getCharById(id);
       const slot = ROOM_SLOTS_3D['1A'].find(s => s.id === id);
       if (!slot) return;
-
-      // 3D sjena na podu bine
-      ctx.save();
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.beginPath();
-      ctx.ellipse(slot.x, slot.y + slot.r * 1.05, slot.r * 0.85, slot.r * 0.28, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      drawCharacterPortrait(ctx, ch, slot.x, slot.y, slot.r);
-
-      ctx.fillStyle = '#ffcc00';
-      ctx.font = 'bold 15px Courier New';
-      ctx.textAlign = 'center';
-      ctx.fillText(ch.name, slot.x, slot.y + slot.r * 1.8);
+      drawFullBodyAnimatronic(ctx, ch, slot.groundX, slot.groundY, slot.height, 'stage', 1.0);
     });
     return;
   }
 
-  // Ostale prostorije s 3D perspective slotovima
-  const slots = ROOM_SLOTS_3D[camId] || [{ x: 450, y: 350, r: 75 }];
+  // Ostale sobe - prirodna visina i položaj na podu u 3D perspektivi
+  const slots = ROOM_SLOTS_3D[camId] || [{ groundX: 450, groundY: 480, height: 200 }];
   present.forEach((id, index) => {
     const ch = getCharById(id);
     const slot = slots[Math.min(index, slots.length - 1)];
-
-    // 3D sjena na podu
-    ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
-    ctx.beginPath();
-    ctx.ellipse(slot.x, slot.y + slot.r * 1.05, slot.r * 0.85, slot.r * 0.28, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    drawCharacterPortrait(ctx, ch, slot.x, slot.y, slot.r);
-
-    ctx.fillStyle = '#ffaa00';
-    ctx.font = 'bold 15px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText(ch.name, slot.x, slot.y + slot.r * 1.85);
+    const ambient = (camId === '3' || camId === '2B' || camId === '4B') ? 0.78 : 0.92;
+    drawFullBodyAnimatronic(ctx, ch, slot.groundX, slot.groundY, slot.height, 'room', ambient);
   });
 }
 
@@ -2197,6 +2169,538 @@ window.addEventListener('keydown', e => {
 // ============================================================================
 // 3D PERSPEKTIVNE PROSTORIJE (SVIH 11 KAMERA)
 // ============================================================================
+
+
+// ============================================================================
+// REALISTIČNO 3D RENDERIRANJE CIJELOG TIJELA ANIMATRONIKA U SOBAMA
+// ============================================================================
+
+function drawFullBodyAnimatronic(ctx, charCfg, groundX, groundY, totalHeight, pose = 'room', ambient = 1.0) {
+  const H = totalHeight;
+  const X = groundX;
+  const Y = groundY;
+
+  ctx.save();
+
+  // 1. SJENA POD NOGAMA NA 3D PODU
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+  ctx.beginPath();
+  ctx.ellipse(X, Y, H * 0.22, H * 0.07, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Dimenzije dijelova tijela u prirodnim animatronik omjerima
+  const legH = H * 0.40;
+  const hipSep = H * 0.085;
+  const pelvisY = Y - legH;
+  const torsoH = H * 0.32;
+  const chestW = H * 0.25;
+  const chestY = pelvisY - torsoH * 0.52;
+  const shoulderY = pelvisY - torsoH * 0.95;
+  const neckH = H * 0.055;
+  const headR = H * 0.135;
+  const headY = shoulderY - neckH - headR * 0.82;
+
+  // Boje animatronika prilagođene ambijentalnom svjetlu prostorije
+  const suitColor = charCfg.color || '#aa5522';
+  const darkMetal = '#20242b';
+  const jointMetal = '#6b7482';
+
+  // Mikro-mehanički titraj glave i tijela
+  const microTwitch = Math.sin(Date.now() * 0.003 + groundX * 0.05) * 0.02;
+
+  // 2. ANIMATRONIK STOPALA I NOGE
+  const drawAnimatronicLeg = (legX, isLeft) => {
+    const kneeY = Y - legH * 0.50;
+    const footY = Y - 4;
+
+    // A. Metalno stopalo s 3 zglobna prsta
+    ctx.fillStyle = darkMetal;
+    ctx.beginPath();
+    ctx.ellipse(legX, footY, H * 0.065, H * 0.025, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3 prsta na stopalu
+    for (let t = -1; t <= 1; t++) {
+      ctx.fillStyle = '#444c59';
+      ctx.beginPath();
+      ctx.arc(legX + t * (H * 0.038), footY + 2, H * 0.016, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // B. Potkoljenica (Suit casing + metalni zglob)
+    ctx.fillStyle = suitColor;
+    ctx.beginPath();
+    ctx.roundRect(legX - H * 0.036, kneeY + 4, H * 0.072, footY - kneeY - 8, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Koljenski zglob (okrugla metalna šarka)
+    ctx.fillStyle = jointMetal;
+    ctx.beginPath();
+    ctx.arc(legX, kneeY, H * 0.024, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#111';
+    ctx.stroke();
+
+    // C. Natkoljenica (Suit casing prema zdjelici)
+    ctx.fillStyle = suitColor;
+    ctx.beginPath();
+    ctx.roundRect(legX - H * 0.040, pelvisY + 6, H * 0.080, kneeY - pelvisY - 8, 5);
+    ctx.fill();
+    ctx.stroke();
+  };
+
+  drawAnimatronicLeg(X - hipSep, true);
+  drawAnimatronicLeg(X + hipSep, false);
+
+  // 3. ZDJELICA I HIDRAULIČNA KRALJEŽNICA
+  ctx.fillStyle = darkMetal;
+  ctx.beginPath();
+  ctx.roundRect(X - H * 0.09, pelvisY - 2, H * 0.18, H * 0.065, 4);
+  ctx.fill();
+
+  // Kralježnica od hidrauličnih cilindara s vidljivim žicama
+  ctx.fillStyle = jointMetal;
+  ctx.fillRect(X - H * 0.025, pelvisY - torsoH * 0.22, H * 0.05, torsoH * 0.25);
+
+  // Žice na struku
+  ctx.strokeStyle = '#cc2222';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(X - H * 0.05, pelvisY);
+  ctx.quadraticCurveTo(X - H * 0.08, pelvisY - torsoH * 0.12, X - H * 0.02, pelvisY - torsoH * 0.2);
+  ctx.stroke();
+
+  // 4. PRSA I TORZO (KARAKTERISTIČAN ZA SVAKOG STREAMAERA)
+  ctx.save();
+  ctx.fillStyle = suitColor;
+  ctx.beginPath();
+  ctx.ellipse(X, chestY, chestW * 0.5, torsoH * 0.48, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Specifični detalji na trbuhu i prsima
+  if (charCfg.id === 'mudja') {
+    // Muđa (Freddy stil): Svjetliji trbuh i crna leptir-mašna
+    ctx.fillStyle = '#ba7e44';
+    ctx.beginPath();
+    ctx.ellipse(X, chestY + torsoH * 0.06, chestW * 0.36, torsoH * 0.36, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dva crna gumba na trbuhu
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(X, chestY, 3.5, 0, Math.PI * 2);
+    ctx.arc(X, chestY + torsoH * 0.14, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Crna satenska leptir mašna
+    ctx.fillStyle = '#151515';
+    ctx.beginPath();
+    ctx.moveTo(X - H * 0.055, shoulderY + H * 0.03);
+    ctx.lineTo(X + H * 0.055, shoulderY + H * 0.065);
+    ctx.lineTo(X + H * 0.055, shoulderY + H * 0.03);
+    ctx.lineTo(X - H * 0.055, shoulderY + H * 0.065);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(X, shoulderY + H * 0.048, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+  } else if (charCfg.id === 'baka') {
+    // Baka (Bonnie stil): Svijetloplavi trbuh + MASIVNI ZLATNI BALKANSKI LANAC
+    ctx.fillStyle = '#737bd4';
+    ctx.beginPath();
+    ctx.ellipse(X, chestY + torsoH * 0.06, chestW * 0.36, torsoH * 0.36, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Zlatni lanac i medaljon
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.arc(X, shoulderY + H * 0.08, chestW * 0.32, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(X, shoulderY + H * 0.16, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Crvena leptir mašna
+    ctx.fillStyle = '#cc1122';
+    ctx.beginPath();
+    ctx.moveTo(X - H * 0.045, shoulderY + H * 0.03);
+    ctx.lineTo(X + H * 0.045, shoulderY + H * 0.055);
+    ctx.lineTo(X + H * 0.045, shoulderY + H * 0.03);
+    ctx.lineTo(X - H * 0.045, shoulderY + H * 0.055);
+    ctx.closePath();
+    ctx.fill();
+
+  } else if (charCfg.id === 'choda') {
+    // Choda (Chica stil): Žuti trbuh + BIJELI PODBRADAK "VOLIM ĆEVAPE!"
+    ctx.fillStyle = '#f0cc35';
+    ctx.beginPath();
+    ctx.ellipse(X, chestY + torsoH * 0.06, chestW * 0.36, torsoH * 0.36, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bijeli trokutasti podbradak
+    ctx.fillStyle = '#f7f7f7';
+    ctx.beginPath();
+    ctx.moveTo(X - chestW * 0.42, shoulderY + H * 0.02);
+    ctx.lineTo(X + chestW * 0.42, shoulderY + H * 0.02);
+    ctx.lineTo(X, chestY + torsoH * 0.28);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#ccaa22';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Natpis na podbratku
+    ctx.fillStyle = '#cc1122';
+    ctx.font = 'bold 9px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('VOLIM', X, chestY - torsoH * 0.02);
+    ctx.fillStyle = '#9911aa';
+    ctx.fillText('ĆEVAPE!', X, chestY + torsoH * 0.12);
+
+  } else if (charCfg.id === 'omco') {
+    // Omčo (Foxy stil): Poderano krzno i vidljiva metalna rebra
+    ctx.fillStyle = '#181b20';
+    ctx.fillRect(X - chestW * 0.3, chestY - torsoH * 0.15, chestW * 0.6, torsoH * 0.32);
+    ctx.strokeStyle = jointMetal;
+    ctx.lineWidth = 2.5;
+    for (let rib = -2; rib <= 2; rib++) {
+      ctx.beginPath();
+      ctx.moveTo(X - chestW * 0.26, chestY + rib * 7);
+      ctx.lineTo(X + chestW * 0.26, chestY + rib * 7);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  // 5. RUKE I REKVIZITI (MIKROFON, GITARA, PLJESKAVICA, KUKA)
+  const drawArm = (armX, isLeft) => {
+    const sX = armX;
+    const sY = shoulderY + H * 0.03;
+    const elbowX = isLeft ? (sX - H * 0.07) : (sX + H * 0.07);
+    const elbowY = sY + H * 0.14;
+    const handX = isLeft ? (elbowX + H * 0.02) : (elbowX - H * 0.02);
+    const handY = elbowY + H * 0.12;
+
+    // Nadlaktica
+    ctx.strokeStyle = suitColor;
+    ctx.lineWidth = H * 0.055;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(sX, sY); ctx.lineTo(elbowX, elbowY);
+    ctx.stroke();
+
+    // Zglob lakta
+    ctx.fillStyle = jointMetal;
+    ctx.beginPath();
+    ctx.arc(elbowX, elbowY, H * 0.022, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Podlaktica
+    ctx.beginPath();
+    ctx.moveTo(elbowX, elbowY); ctx.lineTo(handX, handY);
+    ctx.stroke();
+
+    // Šaka s animatronik prstima
+    ctx.fillStyle = darkMetal;
+    ctx.beginPath();
+    ctx.arc(handX, handY, H * 0.024, 0, Math.PI * 2);
+    ctx.fill();
+
+    return { handX, handY };
+  };
+
+  const leftArm = drawArm(X - chestW * 0.44, true);
+  const rightArm = drawArm(X + chestW * 0.44, false);
+
+  // Rekviziti u rukama likova:
+  if (charCfg.id === 'mudja') {
+    // Vintage kromirani mikrofon u desnoj ruci
+    const mX = rightArm.handX + 4;
+    const mY = rightArm.handY - 8;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(mX - 2, mY, 4, 18);
+    ctx.fillStyle = '#d5dde8';
+    ctx.beginPath();
+    ctx.arc(mX, mY - 4, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+  } else if (charCfg.id === 'baka') {
+    // Crvena električna rock gitara u rukama
+    ctx.save();
+    const gX = X - H * 0.02;
+    const gY = chestY + H * 0.08;
+    ctx.translate(gX, gY);
+    ctx.rotate(-0.35);
+
+    // Tijelo gitare
+    ctx.fillStyle = '#cc1122';
+    ctx.beginPath();
+    ctx.roundRect(-24, -14, 48, 28, 8);
+    ctx.fill();
+
+    // Bijeli pickguard
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-10, -8, 20, 16);
+
+    // Vrat gitare
+    ctx.fillStyle = '#d9a76a';
+    ctx.fillRect(20, -4, 42, 8);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(60, -6, 10, 12);
+    ctx.restore();
+
+  } else if (charCfg.id === 'choda') {
+    // Tanjur s balkanskom pljeskavicom i svijećicom (Chica cupcake stil)
+    const pX = rightArm.handX + 12;
+    const pY = rightArm.handY - 6;
+    ctx.fillStyle = '#c0c0c0';
+    ctx.beginPath();
+    ctx.ellipse(pX, pY, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pljeskavica
+    ctx.fillStyle = '#5c2d12';
+    ctx.beginPath();
+    ctx.ellipse(pX, pY - 5, 11, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Plamičak svijeće
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath();
+    ctx.arc(pX, pY - 14, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+  } else if (charCfg.id === 'omco') {
+    // Metalna gusarska kuka
+    const hX = rightArm.handX;
+    const hY = rightArm.handY;
+    ctx.strokeStyle = '#d5dde8';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.arc(hX + 4, hY - 6, 9, 0.4, Math.PI * 1.5, false);
+    ctx.stroke();
+  }
+
+  // 6. VRAT I GLAVA ANIMATRONIKA
+  ctx.save();
+  ctx.translate(X, headY);
+  ctx.rotate(microTwitch);
+
+  // Metalni vrat s prstenovima
+  ctx.fillStyle = jointMetal;
+  ctx.fillRect(-H * 0.024, headR * 0.65, H * 0.048, neckH * 1.3);
+
+  // UŠI / ŠEŠIR
+  if (charCfg.id === 'mudja') {
+    // Medvjeđe uši na metalnim nosačima
+    ctx.fillStyle = suitColor;
+    ctx.beginPath();
+    ctx.arc(-headR * 0.85, -headR * 0.82, headR * 0.34, 0, Math.PI * 2);
+    ctx.arc(headR * 0.85, -headR * 0.82, headR * 0.34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#111';
+    ctx.stroke();
+
+    // Crni cilindar (Top Hat) s crvenom vrpcom
+    ctx.fillStyle = '#111';
+    ctx.fillRect(-headR * 0.55, -headR * 1.05, headR * 1.1, headR * 0.18); // Obod
+    ctx.fillRect(-headR * 0.36, -headR * 1.85, headR * 0.72, headR * 0.82); // Klobuk
+    ctx.fillStyle = '#cc2222';
+    ctx.fillRect(-headR * 0.36, -headR * 1.18, headR * 0.72, headR * 0.14); // Vrpca
+
+  } else if (charCfg.id === 'baka') {
+    // Zglobne zečje uši s metalnim šarkama
+    const drawRabbitEar = (earX, angle, bent) => {
+      ctx.save();
+      ctx.translate(earX, -headR * 0.8);
+      ctx.rotate(angle);
+
+      // Donji segment uha
+      ctx.fillStyle = suitColor;
+      ctx.beginPath();
+      ctx.roundRect(-headR * 0.18, -headR * 0.75, headR * 0.36, headR * 0.75, 8);
+      ctx.fill();
+
+      // Metalni zglob uha
+      ctx.fillStyle = jointMetal;
+      ctx.beginPath();
+      ctx.arc(0, -headR * 0.75, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Gornji segment uha
+      ctx.translate(0, -headR * 0.75);
+      if (bent) ctx.rotate(0.3);
+      ctx.fillStyle = suitColor;
+      ctx.beginPath();
+      ctx.roundRect(-headR * 0.16, -headR * 0.75, headR * 0.32, headR * 0.75, 8);
+      ctx.fill();
+      ctx.restore();
+    };
+    drawRabbitEar(-headR * 0.55, -0.1, false);
+    drawRabbitEar(headR * 0.55, 0.15, true); // Desno uho malo nagnuto
+
+  } else if (charCfg.id === 'choda') {
+    // Tri animatronik pera na vrhu glave
+    ctx.fillStyle = suitColor;
+    for (let f = -1; f <= 1; f++) {
+      ctx.beginPath();
+      ctx.ellipse(f * 8, -headR * 1.15, 4, 16, f * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+  } else if (charCfg.id === 'omco') {
+    // Lisičje uši
+    ctx.fillStyle = suitColor;
+    ctx.beginPath();
+    ctx.moveTo(-headR * 0.8, -headR * 0.4);
+    ctx.lineTo(-headR * 1.3, -headR * 1.4);
+    ctx.lineTo(-headR * 0.3, -headR * 0.9);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(headR * 0.8, -headR * 0.4);
+    ctx.lineTo(headR * 1.3, -headR * 1.4);
+    ctx.lineTo(headR * 0.3, -headR * 0.9);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // GLAVA / LICE (CUSTOM SLIKA ILI HOROR VEKTORSKA GLAVA)
+  if (charCfg.customImg) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, headR, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(charCfg.customImg, -headR, -headR, headR * 2, headR * 2);
+    ctx.restore();
+
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, headR, 0, Math.PI * 2);
+    ctx.stroke();
+
+  } else {
+    // Vektorska animatronik glava
+    ctx.fillStyle = suitColor;
+    ctx.beginPath();
+    ctx.arc(0, 0, headR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Slušalice (svi su streameri!)
+    ctx.strokeStyle = '#151515';
+    ctx.lineWidth = Math.max(3, headR * 0.16);
+    ctx.beginPath();
+    ctx.arc(0, 0, headR * 1.05, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+
+    ctx.fillStyle = '#cc1111';
+    ctx.fillRect(-headR * 1.15, -headR * 0.25, headR * 0.22, headR * 0.5);
+    ctx.fillRect(headR * 0.93, -headR * 0.25, headR * 0.22, headR * 0.5);
+
+    // OČNE DUPLJE I UŽARENE ZJENICE
+    const eyeSep = headR * 0.38;
+    const eyeY = -headR * 0.15;
+
+    // Crne animatronik duplje
+    ctx.fillStyle = '#050505';
+    ctx.beginPath();
+    ctx.arc(-eyeSep, eyeY, headR * 0.26, 0, Math.PI * 2);
+    ctx.arc(eyeSep, eyeY, headR * 0.26, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Užarene oči koje sjaje u tami
+    const eyePulse = 0.8 + 0.2 * Math.sin(Date.now() * 0.007);
+    ctx.fillStyle = `rgba(255, 255, 255, ${eyePulse})`;
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(-eyeSep, eyeY, headR * 0.09, 0, Math.PI * 2);
+    ctx.arc(eyeSep, eyeY, headR * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Specifični detalji lica:
+    if (charCfg.id === 'mudja') {
+      // Smeđa njuška
+      ctx.fillStyle = '#ba7e44';
+      ctx.beginPath();
+      ctx.ellipse(0, headR * 0.25, headR * 0.44, headR * 0.28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.beginPath();
+      ctx.arc(0, headR * 0.16, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (charCfg.id === 'baka') {
+      // Sunčane naočale
+      ctx.fillStyle = 'rgba(10, 10, 12, 0.9)';
+      ctx.beginPath();
+      ctx.roundRect(-headR * 0.65, -headR * 0.28, headR * 0.55, headR * 0.32, 4);
+      ctx.roundRect(headR * 0.10, -headR * 0.28, headR * 0.55, headR * 0.32, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+    } else if (charCfg.id === 'choda') {
+      // Narančasti kljun i zubi
+      ctx.fillStyle = '#e87313';
+      ctx.beginPath();
+      ctx.moveTo(-headR * 0.32, headR * 0.15);
+      ctx.lineTo(headR * 0.32, headR * 0.15);
+      ctx.lineTo(0, headR * 0.52);
+      ctx.closePath();
+      ctx.fill();
+
+    } else if (charCfg.id === 'omco') {
+      // Crni povez preko oka
+      ctx.fillStyle = '#111';
+      ctx.beginPath();
+      ctx.arc(eyeSep, eyeY, headR * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-headR, -headR * 0.4);
+      ctx.lineTo(headR, headR * 0.1);
+      ctx.stroke();
+    }
+
+    // Čeljust s animatronik zubima
+    ctx.fillStyle = '#110505';
+    ctx.fillRect(-headR * 0.38, headR * 0.48, headR * 0.76, headR * 0.24);
+    ctx.fillStyle = '#eee';
+    for (let t = -3; t <= 3; t++) {
+      ctx.fillRect(t * 6 - 2, headR * 0.49, 4, 6);
+    }
+  }
+
+  ctx.restore(); // restore glava
+  ctx.restore(); // restore cijelo tijelo
+
+  // Oznaka imena lika ispod nogu
+  ctx.fillStyle = '#ffaa00';
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(charCfg.name, X, Y + 18);
+}
 
 // 1. CAM 1A: GLAVNI STUDIO / BINA (SHOW STAGE)
 function drawStageCAM1A(ctx) {
@@ -3689,7 +4193,7 @@ function drawGreenScreenCAM1C(ctx, omcoChar, omcoEnt) {
     ctx.fillStyle = '#5c1b6e';
     ctx.fillRect(170, 90, 210, 420);
     ctx.fillRect(520, 90, 210, 420);
-    drawCharacterPortrait(ctx, omcoChar, 450, 310, 68);
+    drawFullBodyAnimatronic(ctx, omcoChar, 450, 480, 225, 'stage', 0.9);
     ctx.fillStyle = '#ffaa00';
     ctx.font = 'bold 18px Courier New';
     ctx.fillText('⚠️ ZAVJESA RAZMAKNUTA - OMCO VIRI!', 450, 140);
@@ -3698,7 +4202,7 @@ function drawGreenScreenCAM1C(ctx, omcoChar, omcoEnt) {
     ctx.fillStyle = '#5c1b6e';
     ctx.fillRect(170, 90, 90, 420);
     ctx.fillRect(640, 90, 90, 420);
-    drawCharacterPortrait(ctx, omcoChar, 450, 335, 96, true);
+    drawFullBodyAnimatronic(ctx, omcoChar, 450, 490, 235, 'stage', 1.0);
     ctx.fillStyle = '#ff2222';
     ctx.font = 'bold 22px Courier New';
     ctx.fillText('🚨 SPREMAN ZA SPRINT! PAZI NA CAM 2A! 🚨', 450, 140);
