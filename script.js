@@ -431,16 +431,28 @@ class BalkanAudioEngine {
     }
   }
 
-  // Glasan sintetizirani horor JUMPSCARE vrisak
+  // Zastrašujući višeslojni JUMPSCARE krik (Sub-bass udarac + FNaF 1 FM shriek + crunch)
   playJumpscareScream(basePitch = 420) {
     this.stopToreador();
     this.stopPhoneSpeech();
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
-    // Višeslojna FM distorzija + bijeli šum
-    const freqs = [basePitch, basePitch * 1.37, basePitch * 1.83, 145];
-    freqs.forEach((f) => {
+    // 1. Visceralni Sub-Bass udarac (65 Hz -> 22 Hz drop) koji trese zvučnike
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(65, now);
+    subOsc.frequency.exponentialRampToValueAtTime(22, now + 0.85);
+    subGain.gain.setValueAtTime(0.85, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+    subOsc.connect(subGain);
+    subGain.connect(this.ctx.destination);
+    subOsc.start(now);
+    subOsc.stop(now + 0.9);
+
+    // 2. Piercing visoki metalni vrisak (FNaF 1 screech: 2100Hz & 2550Hz sa 72Hz FM modulacijom)
+    [2100, 2550].forEach(f => {
       const osc = this.ctx.createOscillator();
       const mod = this.ctx.createOscillator();
       const modGain = this.ctx.createGain();
@@ -448,14 +460,14 @@ class BalkanAudioEngine {
 
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(f, now);
-      osc.frequency.linearRampToValueAtTime(f * 0.72, now + 1.2);
+      osc.frequency.linearRampToValueAtTime(f * 0.68, now + 1.4);
 
       mod.type = 'square';
-      mod.frequency.value = 48;
-      modGain.gain.value = 180;
+      mod.frequency.value = 72; // brza frekvencijska modulacija za agresivno deranje
+      modGain.gain.value = 450;
 
-      master.gain.setValueAtTime(0.32, now);
-      master.gain.exponentialRampToValueAtTime(0.001, now + 1.35);
+      master.gain.setValueAtTime(0.42, now);
+      master.gain.exponentialRampToValueAtTime(0.001, now + 1.45);
 
       mod.connect(modGain);
       modGain.connect(osc.frequency);
@@ -464,20 +476,129 @@ class BalkanAudioEngine {
 
       mod.start(now);
       osc.start(now);
-      mod.stop(now + 1.36);
-      osc.stop(now + 1.36);
+      mod.stop(now + 1.45);
+      osc.stop(now + 1.45);
     });
 
-    // Eksplozija šuma
-    const nSrc = this.ctx.createBufferSource();
-    nSrc.buffer = this.noiseBuffer;
-    const nGain = this.ctx.createGain();
-    nGain.gain.setValueAtTime(0.65, now);
-    nGain.gain.exponentialRampToValueAtTime(0.01, now + 1.25);
-    nSrc.connect(nGain);
-    nGain.connect(this.ctx.destination);
-    nSrc.start(now);
-    nSrc.stop(now + 1.3);
+    // 3. Kaotično grleno režanje (srednji sloj glasa)
+    const midOsc = this.ctx.createOscillator();
+    const midMod = this.ctx.createOscillator();
+    const midModGain = this.ctx.createGain();
+    const midMaster = this.ctx.createGain();
+    midOsc.type = 'sawtooth';
+    midOsc.frequency.setValueAtTime(basePitch, now);
+    midOsc.frequency.linearRampToValueAtTime(basePitch * 0.6, now + 1.5);
+    midMod.type = 'sawtooth';
+    midMod.frequency.value = 38;
+    midModGain.gain.value = 220;
+    midMaster.gain.setValueAtTime(0.55, now);
+    midMaster.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+    midMod.connect(midModGain);
+    midModGain.connect(midOsc.frequency);
+    midOsc.connect(midMaster);
+    midMaster.connect(this.ctx.destination);
+    midMod.start(now);
+    midOsc.start(now);
+    midMod.stop(now + 1.5);
+    midOsc.stop(now + 1.5);
+
+    // 4. Eksplozija drobljenja i bijelog šuma (crunch filter)
+    if (this.noiseBuffer) {
+      const nSrc = this.ctx.createBufferSource();
+      nSrc.buffer = this.noiseBuffer;
+      const nFilter = this.ctx.createBiquadFilter();
+      nFilter.type = 'bandpass';
+      nFilter.frequency.setValueAtTime(1200, now);
+      nFilter.Q.value = 1.8;
+      const nGain = this.ctx.createGain();
+      nGain.gain.setValueAtTime(0.85, now);
+      nGain.gain.exponentialRampToValueAtTime(0.01, now + 1.4);
+      nSrc.connect(nFilter);
+      nFilter.connect(nGain);
+      nGain.connect(this.ctx.destination);
+      nSrc.start(now);
+      nSrc.stop(now + 1.45);
+    }
+  }
+
+  // Uvodni elektronski digitalni sat i gong (12:00 AM - FNaF Night Intro)
+  playNightIntroChime() {
+    this.stopToreador();
+    this.stopPhoneSpeech();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const beeps = [880, 1174, 1318];
+    beeps.forEach((freq, idx) => {
+      const t = now + idx * 0.32;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    });
+
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(110, now);
+    subOsc.frequency.linearRampToValueAtTime(55, now + 2.2);
+    subGain.gain.setValueAtTime(0.32, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+    subOsc.connect(subGain);
+    subGain.connect(this.ctx.destination);
+    subOsc.start(now);
+    subOsc.stop(now + 2.2);
+  }
+
+  // Mehanički zvuk podizanja i spuštanja CCTV monitora
+  playMonitorSwoosh(isOpen) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    if (isOpen) {
+      osc.frequency.setValueAtTime(80, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.18);
+    } else {
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(65, now + 0.18);
+    }
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(600, now);
+
+    gain.gain.setValueAtTime(0.24, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.19);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.20);
+  }
+
+  // Kratki CRT glitch/static burst kad se promijeni kamera
+  playCamStaticBurst() {
+    if (!this.ctx || !this.noiseBuffer) return;
+    const now = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    src.connect(gain);
+    gain.connect(this.ctx.destination);
+    src.start(now);
+    src.stop(now + 0.15);
   }
 
   // Veseli jingle za pobjedu u 06:00 AM
@@ -500,6 +621,69 @@ class BalkanAudioEngine {
       osc.stop(t + 0.58);
     });
   }
+
+  // Zastrašujući sablasni smijeh kada se Zlatni Muđa pojavi u uredu
+  playGoldenLaugh() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(130, now);
+    osc.frequency.exponentialRampToValueAtTime(70, now + 1.8);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(420, now);
+
+    gain.gain.setValueAtTime(0.45, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 2.0);
+  }
+
+  // Zloglasni usporeni demonski jumpscare urlik Golden Freddyja
+  playGoldenJumpscareScream() {
+    this.stopToreador();
+    this.stopPhoneSpeech();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    const freqs = [82, 110, 148, 58];
+    freqs.forEach((f) => {
+      const osc = this.ctx.createOscillator();
+      const mod = this.ctx.createOscillator();
+      const modGain = this.ctx.createGain();
+      const master = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f, now);
+      osc.frequency.linearRampToValueAtTime(f * 0.65, now + 2.2);
+
+      mod.type = 'square';
+      mod.frequency.value = 22;
+      modGain.gain.value = 140;
+
+      master.gain.setValueAtTime(0.52, now);
+      master.gain.exponentialRampToValueAtTime(0.001, now + 2.3);
+
+      mod.connect(modGain);
+      modGain.connect(osc.frequency);
+      osc.connect(master);
+      master.connect(this.ctx.destination);
+
+      mod.start(now);
+      osc.start(now);
+      mod.stop(now + 2.3);
+      osc.stop(now + 2.3);
+    });
+  }
 }
 
 const audio = new BalkanAudioEngine();
@@ -508,17 +692,17 @@ const audio = new BalkanAudioEngine();
 // 2. DEFINICIJA SVIH 11 ORIGINALNIH KAMERA I LIKOVA
 // ----------------------------------------------------------------------------
 const CAMERAS = {
-  '1A': { id: '1A', name: 'CAM 1A - Glavni Studio / Bina', x: 1030, y: 375, key: '1' },
-  '1B': { id: '1B', name: 'CAM 1B - Sala Kafane sa Stolovima', x: 1015, y: 430, key: null },
-  '1C': { id: '1C', name: 'CAM 1C - Green Screen Kutak', x: 960, y: 485, key: '2' },
-  '2A': { id: '2A', name: 'CAM 2A - Lijevi Hodnik', x: 1000, y: 555, key: '3' },
-  '2B': { id: '2B', name: 'CAM 2B - Lijevi Kut pred Uredom', x: 1000, y: 605, key: null },
-  '3':  { id: '3',  name: 'CAM 3 - Špajza s Gajbama Piva', x: 935, y: 545, key: null },
-  '4A': { id: '4A', name: 'CAM 4A - Desni Hodnik', x: 1090, y: 555, key: '4' },
-  '4B': { id: '4B', name: 'CAM 4B - Desni Kut pred Uredom', x: 1090, y: 605, key: null },
-  '5':  { id: '5',  name: 'CAM 5 - Backstage & Kazetofon', x: 935, y: 425, key: '6' },
-  '6':  { id: '6',  name: 'CAM 6 - Kuhinja & Roštilj [AUDIO]', x: 1165, y: 525, key: '5' },
-  '7':  { id: '7',  name: 'CAM 7 - Toaleti Kafane', x: 1165, y: 435, key: null }
+  '1A': { id: '1A', name: 'CAM 1A - Glavni Studio / Bina', x: 1045, y: 378, key: '1' },
+  '1B': { id: '1B', name: 'CAM 1B - Sala Kafane sa Stolovima', x: 1045, y: 444, key: null },
+  '1C': { id: '1C', name: 'CAM 1C - Green Screen Kutak', x: 955, y: 480, key: '2' },
+  '2A': { id: '2A', name: 'CAM 2A - Lijevi Hodnik', x: 1007, y: 512, key: '3' },
+  '2B': { id: '2B', name: 'CAM 2B - Lijevi Kut pred Uredom', x: 1007, y: 574, key: null },
+  '3':  { id: '3',  name: 'CAM 3 - Špajza s Gajbama Piva', x: 945, y: 556, key: null },
+  '4A': { id: '4A', name: 'CAM 4A - Desni Hodnik', x: 1091, y: 512, key: '4' },
+  '4B': { id: '4B', name: 'CAM 4B - Desni Kut pred Uredom', x: 1091, y: 574, key: null },
+  '5':  { id: '5',  name: 'CAM 5 - Backstage & Kazetofon', x: 945, y: 420, key: '6' },
+  '6':  { id: '6',  name: 'CAM 6 - Kuhinja & Roštilj [AUDIO]', x: 1175, y: 494, key: '5' },
+  '7':  { id: '7',  name: 'CAM 7 - Toaleti Kafane', x: 1175, y: 430, key: null }
 };
 
 const DEFAULT_CHARACTERS = [
@@ -571,6 +755,16 @@ const DEFAULT_CHARACTERS = [
     hatColor: '#aa0000',
     pitch: 740,
     path: ['5']
+  },
+  {
+    id: 'golden',
+    role: 'GOLDEN FREDDY (Zlatni Misterij)',
+    defaultName: 'Zlatni Muđa',
+    defaultCry: 'TO SAM JA! (IT\'S ME)',
+    color: '#d4af37',
+    hatColor: '#0a0b12',
+    pitch: 110,
+    path: []
   }
 ];
 
@@ -693,7 +887,24 @@ let state = {
   jumpscareChar: null,
   jumpscareTimer: 0,
   endReason: '',
-  earnedPay: '125,00 €'
+  earnedPay: '125,00 €',
+
+  // Golden Freddy (Zlatni Muđa - autentične FNaF 1 mehanike)
+  goldenFreddy: {
+    posterActive: false,      // Je li plakat na CAM 2B zamijenjen Zlatnim Muđom
+    inOffice: false,          // Sjedi li Zlatni Muđa sklupčan na podu ureda
+    timer: 0,                 // Koliko dugo sjedi u uredu (nakon 2.6s -> jumpscare)
+    hallucinationTimer: 0,    // Tajmer za "IT'S ME / TO SAM JA" i brze negativne bljeskove
+    checkCooldown: 0          // Cooldown između provjera plakata na CAM 2B
+  },
+
+  // Noćni intro & animacije monitora
+  nightIntroTimer: 0,
+  nightIntroMax: 2.4,
+  monitorAnim: 0,         // 0.0 = ured, 1.0 = CCTV monitor potpuno podignut
+  monitorState: 'CLOSED', // 'CLOSED', 'OPENING', 'OPEN', 'CLOSING'
+  camStaticTimer: 0,      // CRT glitch/wipe kad se prebaci kamera
+  radarScanY: 0           // Scanline radar na minimapi
 };
 
 // ----------------------------------------------------------------------------
@@ -766,7 +977,8 @@ function buildCustomNightUI() {
   const grid = document.getElementById('cn-grid');
   grid.innerHTML = '';
 
-  charConfigs.forEach((ch, index) => {
+  // Prikazujemo 5 glavnih aktivnih animatronika (Golden Freddy je skriveni misterij)
+  charConfigs.filter(ch => ch.id !== 'golden').forEach((ch, index) => {
     const card = document.createElement('div');
     card.className = 'char-card';
 
@@ -846,7 +1058,21 @@ document.getElementById('btn-20202020').addEventListener('click', () => {
 
 document.getElementById('btn-start-cn').addEventListener('click', () => {
   audio.init();
+
+  // FNaF 1 EASTER EGG: 1-9-8-7 triggerira Golden Freddy jumpscare!
+  const mAI = charConfigs.find(c => c.id === 'mudja')?.aiLevel || 0;
+  const bAI = charConfigs.find(c => c.id === 'baka')?.aiLevel || 0;
+  const cAI = charConfigs.find(c => c.id === 'choda')?.aiLevel || 0;
+  const oAI = charConfigs.find(c => c.id === 'omco')?.aiLevel || 0;
+
   document.getElementById('custom-night-modal').classList.add('hidden');
+
+  if (mAI === 1 && bAI === 9 && cAI === 8 && oAI === 7) {
+    startNight(6, true);
+    triggerGoldenJumpscare();
+    return;
+  }
+
   startNight(6, true);
 });
 
@@ -863,8 +1089,21 @@ document.getElementById('btn-mute-call').addEventListener('click', () => {
 });
 
 
+let lastCamToggleTime = 0;
+document.getElementById('cam-toggle-bar').addEventListener('mouseenter', () => {
+  const now = Date.now();
+  if (now - lastCamToggleTime > 320 && state.screen === 'PLAYING') {
+    lastCamToggleTime = now;
+    toggleCameraMonitor();
+  }
+});
+
 document.getElementById('cam-toggle-bar').addEventListener('click', () => {
-  toggleCameraMonitor();
+  const now = Date.now();
+  if (now - lastCamToggleTime > 150) {
+    lastCamToggleTime = now;
+    toggleCameraMonitor();
+  }
 });
 
 // ----------------------------------------------------------------------------
@@ -875,7 +1114,6 @@ function getCharById(id) {
 }
 
 function startNight(nightNum, isCustomNight = false) {
-  state.screen = 'PLAYING';
   state.selectedNight = nightNum;
   state.nightTimeElapsed = 0;
   state.currentHour = 0;
@@ -919,7 +1157,24 @@ function startNight(nightNum, isCustomNight = false) {
   state.doorImpactNotice = '';
   state.doorImpactNoticeTimer = 0;
 
-  // Razvojna statistika smjene (isključeno po defaultu, aktivira se s ?dev=1 ili window.toggleDevStats())
+  // Resetiraj stanje Golden Freddyja
+  state.goldenFreddy = {
+    posterActive: false,
+    inOffice: false,
+    timer: 0,
+    hallucinationTimer: 0,
+    checkCooldown: 0
+  };
+
+  // Resetiraj animacije monitora i intro ekrana
+  state.screen = 'NIGHT_INTRO';
+  state.nightIntroTimer = 0;
+  state.nightIntroMax = 2.4;
+  state.monitorAnim = 0;
+  state.monitorState = 'CLOSED';
+  state.camStaticTimer = 0;
+
+  // Razvojna statistika smjene
   const isDevUrl = typeof window !== 'undefined' && window.location && new URLSearchParams(window.location.search).get('dev') === '1';
   state.devStats = {
     enabled: state.devStats ? state.devStats.enabled : isDevUrl,
@@ -938,26 +1193,45 @@ function startNight(nightNum, isCustomNight = false) {
   };
 
   document.getElementById('menu-screen').classList.add('hidden');
-  document.getElementById('hud-layer').classList.remove('hidden');
-  document.getElementById('hud-night').textContent = nightNum === 6 ? 'CUSTOM NIGHT' : `NOĆ ${nightNum}`;
+  document.getElementById('hud-layer').classList.add('hidden');
+  document.getElementById('phone-box').classList.add('hidden');
   document.getElementById('tape-warning').classList.add('hidden');
 
-  // Pokreni poziv Gazde Mileta
-  const msg = PHONE_MESSAGES[nightNum] || 'Alo majstore! Custom Night je u tijeku – svi streameri su na maksimumu, nek ti je sa srećom!';
-  document.getElementById('phone-text').textContent = msg;
-  document.getElementById('phone-box').classList.remove('hidden');
-  audio.startPhoneSpeech();
+  audio.playNightIntroChime(nightNum);
 }
 
 function toggleCameraMonitor() {
   if (state.screen !== 'PLAYING' || state.powerOut) return;
-  state.camOpen = !state.camOpen;
   state.windingTape = false;
-  if (state.camOpen) {
+
+  if (state.camOpen || state.monitorState === 'OPENING') {
+    // SPUŠTANJE MONITORA
+    state.monitorState = 'CLOSING';
+    state.camOpen = false;
+    audio.playMonitorSwoosh(false);
+
+    // Ako je plakat na CAM 2B bio viđen, stvara se u uredu!
+    if (state.goldenFreddy && state.goldenFreddy.posterActive) {
+      state.goldenFreddy.posterActive = false;
+      state.goldenFreddy.inOffice = true;
+      state.goldenFreddy.timer = 0;
+      state.goldenFreddy.hallucinationTimer = 0;
+      audio.playGoldenLaugh();
+    }
+  } else {
+    // PODIZANJE MONITORA
+    state.monitorState = 'OPENING';
     state.leftLightOn = false;
     state.rightLightOn = false;
+    audio.playMonitorSwoosh(true);
+
+    // DEFENSE PROTIV GOLDEN FREDDYJA: Podizanje monitora odmah ga tjera iz ureda!
+    if (state.goldenFreddy && state.goldenFreddy.inOffice) {
+      state.goldenFreddy.inOffice = false;
+      state.goldenFreddy.timer = 0;
+    }
+    if (state.currentCam === '2B') checkGoldenFreddyPoster();
   }
-  audio.playCamBlip();
 }
 
 function toggleLeftDoor() {
@@ -1079,10 +1353,30 @@ function updateGame(dt) {
     ? Math.min(1, state.rightDoorAnim + doorSpeed)
     : Math.max(0, state.rightDoorAnim - doorSpeed);
 
+  if (state.screen === 'NIGHT_INTRO') {
+    state.nightIntroTimer += dt;
+    if (state.nightIntroTimer >= state.nightIntroMax) {
+      state.screen = 'PLAYING';
+      document.getElementById('hud-layer').classList.remove('hidden');
+      document.getElementById('hud-night').textContent = state.selectedNight === 6 ? 'CUSTOM NIGHT' : `NOĆ ${state.selectedNight}`;
+      const msg = PHONE_MESSAGES[state.selectedNight] || 'Alo majstore! Custom Night je u tijeku – svi streameri su na maksimumu, nek ti je sa srećom!';
+      document.getElementById('phone-text').textContent = msg;
+      document.getElementById('phone-box').classList.remove('hidden');
+      audio.startPhoneSpeech();
+    }
+    return;
+  }
+
   if (state.screen === 'JUMPSCARE') {
     state.jumpscareTimer += dt;
-    if (state.jumpscareTimer >= 2.1) {
-      state.screen = 'GAMEOVER';
+    const isGolden = state.jumpscareChar && state.jumpscareChar.id === 'golden';
+    const limit = isGolden ? 2.3 : 2.1;
+    if (state.jumpscareTimer >= limit) {
+      if (isGolden) {
+        state.screen = 'CRASH';
+      } else {
+        state.screen = 'GAMEOVER';
+      }
     }
     return;
   }
@@ -1090,6 +1384,27 @@ function updateGame(dt) {
   if (state.screen !== 'PLAYING') {
     audio.updateContinuousAudio(false, false, false, false);
     return;
+  }
+
+  // Animacija podizanja i spuštanja CCTV monitora
+  if (state.monitorState === 'OPENING') {
+    state.monitorAnim = Math.min(1.0, (state.monitorAnim || 0) + dt * 5.2);
+    if (state.monitorAnim >= 1.0) {
+      state.monitorAnim = 1.0;
+      state.monitorState = 'OPEN';
+      state.camOpen = true;
+    }
+  } else if (state.monitorState === 'CLOSING') {
+    state.monitorAnim = Math.max(0.0, (state.monitorAnim || 0) - dt * 5.2);
+    if (state.monitorAnim <= 0.0) {
+      state.monitorAnim = 0.0;
+      state.monitorState = 'CLOSED';
+      state.camOpen = false;
+    }
+  }
+
+  if (state.camStaticTimer > 0) {
+    state.camStaticTimer -= dt;
   }
 
   // Panoramsko pomicanje pogleda mišem u uredu (brže što je miš bliže rubu ekrana)
@@ -1368,6 +1683,33 @@ function updateGame(dt) {
     }
   });
 
+  // Povremena provjera plakata Zlatnog Muđe dok je igrač na CAM 2B
+  if (state.camOpen && state.currentCam === '2B' && state.goldenFreddy) {
+    state.goldenFreddy.checkCooldown = (state.goldenFreddy.checkCooldown || 0) + dt;
+    if (state.goldenFreddy.checkCooldown >= 3.0) {
+      state.goldenFreddy.checkCooldown = 0;
+      checkGoldenFreddyPoster();
+    }
+  }
+
+  // AI 4: GOLDEN FREDDY (Zlatni Muđa u uredu - igrač mora dići monitor unutar 2.6s)
+  if (state.goldenFreddy && state.goldenFreddy.inOffice) {
+    if (!state.camOpen) {
+      state.goldenFreddy.timer += dt;
+      state.goldenFreddy.hallucinationTimer += dt;
+
+      // Ako igrač gleda u njega dulje od 2.6 sekundi bez dizanja monitora -> JUMPSCARE!
+      if (state.goldenFreddy.timer >= 2.6) {
+        triggerGoldenJumpscare();
+        return;
+      }
+    } else {
+      // Čim je monitor podignut, Zlatni Muđa nestaje!
+      state.goldenFreddy.inOffice = false;
+      state.goldenFreddy.timer = 0;
+    }
+  }
+
   updateHUD();
 }
 
@@ -1453,17 +1795,19 @@ function drawCharacterPortrait(g, charCfg, cx, cy, radius, isJumpscare = false) 
     // Oči (horor animatronik stil)
     const eyeOffX = radius * 0.36;
     const eyeY = cy - radius * 0.14;
-    g.fillStyle = isJumpscare ? '#000' : '#111';
+    const isGolden = charCfg.id === 'golden';
+    g.fillStyle = (isJumpscare || isGolden) ? '#000' : '#111';
     g.beginPath();
     g.arc(cx - eyeOffX, eyeY, radius * 0.24, 0, Math.PI * 2);
     g.arc(cx + eyeOffX, eyeY, radius * 0.24, 0, Math.PI * 2);
     g.fill();
 
-    // Zjenice koje svijetle
-    g.fillStyle = isJumpscare ? '#ff2222' : '#ffffff';
+    // Zjenice koje svijetle (Zlatni Muđa ima sablasne sićušne bijele točke)
+    g.fillStyle = isGolden ? '#ffffff' : (isJumpscare ? '#ff2222' : '#ffffff');
+    const pupilRad = isGolden ? radius * 0.05 : (isJumpscare ? radius * 0.09 : radius * 0.09);
     g.beginPath();
-    g.arc(cx - eyeOffX, eyeY, radius * 0.09, 0, Math.PI * 2);
-    g.arc(cx + eyeOffX, eyeY, radius * 0.09, 0, Math.PI * 2);
+    g.arc(cx - eyeOffX, eyeY, pupilRad, 0, Math.PI * 2);
+    g.arc(cx + eyeOffX, eyeY, pupilRad, 0, Math.PI * 2);
     g.fill();
 
     // Obrve
@@ -1868,6 +2212,11 @@ function renderOffice() {
     ctx.restore();
   }
 
+  // Zlatni Muđa (Golden Freddy) sklupčan na podu ureda
+  if (state.goldenFreddy && state.goldenFreddy.inOffice && !state.powerOut) {
+    drawGoldenFreddySlumped(ctx, 640, 575, 1.15);
+  }
+
   ctx.restore();
 }
 
@@ -2252,37 +2601,240 @@ function drawTapeMechanicUI() {
 }
 
 function drawCCTVMap() {
-  // Pozadina tlocrta
-  ctx.fillStyle = 'rgba(10, 18, 14, 0.85)';
-  ctx.strokeStyle = '#33ff55';
+  const mapX = 905;
+  const mapY = 340;
+  const mapW = 345;
+  const mapH = 326;
+
+  ctx.save();
+
+  // 1. CRT Radar pozadina sa suptilnom mrežom
+  ctx.fillStyle = 'rgba(5, 14, 10, 0.92)';
+  ctx.fillRect(mapX, mapY, mapW, mapH);
+  ctx.strokeStyle = '#22cc44';
   ctx.lineWidth = 2;
-  ctx.fillRect(905, 340, 345, 330);
-  ctx.strokeRect(905, 340, 345, 330);
+  ctx.strokeRect(mapX, mapY, mapW, mapH);
 
-  // Centralno označen URED (YOU)
-  ctx.fillStyle = '#224429';
-  ctx.strokeStyle = '#fff';
-  ctx.fillRect(1022, 610, 62, 42);
-  ctx.strokeRect(1022, 610, 62, 42);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 11px Courier New';
+  // Mreža (Blueprint Grid)
+  ctx.strokeStyle = 'rgba(40, 180, 80, 0.08)';
+  ctx.lineWidth = 1;
+  for (let gx = mapX + 20; gx < mapX + mapW; gx += 20) {
+    ctx.beginPath(); ctx.moveTo(gx, mapY); ctx.lineTo(gx, mapY + mapH); ctx.stroke();
+  }
+  for (let gy = mapY + 20; gy < mapY + mapH; gy += 20) {
+    ctx.beginPath(); ctx.moveTo(mapX, gy); ctx.lineTo(mapX + mapW, gy); ctx.stroke();
+  }
+
+  // 2. TLOCRTNI HODNICI (Povezuju sobe i pokazuju smjer kretanja animatronika)
+  ctx.strokeStyle = '#2ee860';
+  ctx.lineWidth = 2.5;
+  ctx.fillStyle = 'rgba(16, 50, 30, 0.55)';
+
+  // Prolaz 1A (Bina) -> 1B (Sala)
+  ctx.fillRect(1028, 396, 34, 18);
+  ctx.beginPath();
+  ctx.moveTo(1028, 396); ctx.lineTo(1028, 414);
+  ctx.moveTo(1062, 396); ctx.lineTo(1062, 414);
+  ctx.stroke();
+
+  // Prolaz 1B (Sala) <-> 5 (Backstage)
+  ctx.fillRect(974, 408, 14, 24);
+  ctx.beginPath();
+  ctx.moveTo(974, 408); ctx.lineTo(988, 408);
+  ctx.moveTo(974, 432); ctx.lineTo(988, 432);
+  ctx.stroke();
+
+  // Prolaz 1B (Sala) <-> 1C (Pirate Cove)
+  ctx.fillRect(974, 466, 14, 20);
+  ctx.beginPath();
+  ctx.moveTo(974, 466); ctx.lineTo(988, 466);
+  ctx.moveTo(974, 486); ctx.lineTo(988, 486);
+  ctx.stroke();
+
+  // Prolaz 1B (Sala) <-> 7 (Toaleti)
+  ctx.fillRect(1102, 418, 42, 22);
+  ctx.beginPath();
+  ctx.moveTo(1102, 418); ctx.lineTo(1144, 418);
+  ctx.moveTo(1102, 440); ctx.lineTo(1144, 440);
+  ctx.stroke();
+
+  // Prolaz 7 (Toaleti) <-> 6 (Kuhinja)
+  ctx.fillRect(1160, 452, 30, 18);
+  ctx.beginPath();
+  ctx.moveTo(1160, 452); ctx.lineTo(1160, 470);
+  ctx.moveTo(1190, 452); ctx.lineTo(1190, 470);
+  ctx.stroke();
+
+  // Spoj 6 (Kuhinja) <-> 4A (Desni hodnik)
+  ctx.fillRect(1114, 484, 30, 20);
+  ctx.beginPath();
+  ctx.moveTo(1114, 484); ctx.lineTo(1144, 484);
+  ctx.moveTo(1114, 504); ctx.lineTo(1144, 504);
+  ctx.stroke();
+
+  // LIJEVI HODNIK (West Hall - 2A & 2B)
+  // 1B -> 2A
+  ctx.fillRect(984, 468, 46, 20);
+  ctx.beginPath();
+  ctx.moveTo(984, 468); ctx.lineTo(984, 488);
+  ctx.moveTo(1030, 468); ctx.lineTo(1030, 488);
+  ctx.stroke();
+
+  // Spoj 2A <-> 3 (Špajza)
+  ctx.fillRect(974, 544, 10, 22);
+  ctx.beginPath();
+  ctx.moveTo(974, 544); ctx.lineTo(984, 544);
+  ctx.moveTo(974, 566); ctx.lineTo(984, 566);
+  ctx.stroke();
+
+  // Prolaz 2A -> 2B (kontinuirani hodnik)
+  ctx.fillRect(984, 536, 46, 16);
+  ctx.beginPath();
+  ctx.moveTo(984, 536); ctx.lineTo(984, 552);
+  ctx.moveTo(1030, 536); ctx.lineTo(1030, 552);
+  ctx.stroke();
+
+  // Spoj 2B -> URED (Lijeva vrata sa skretanjem)
+  ctx.fillRect(1004, 598, 20, 18);
+  ctx.beginPath();
+  ctx.moveTo(984, 598); ctx.lineTo(984, 616); ctx.lineTo(1022, 616);
+  ctx.moveTo(1030, 584); ctx.lineTo(1030, 602); ctx.lineTo(1022, 602);
+  ctx.stroke();
+
+  // DESNI HODNIK (East Hall - 4A & 4B)
+  // 1B -> 4A
+  ctx.fillRect(1068, 468, 46, 20);
+  ctx.beginPath();
+  ctx.moveTo(1068, 468); ctx.lineTo(1068, 488);
+  ctx.moveTo(1114, 468); ctx.lineTo(1114, 488);
+  ctx.stroke();
+
+  // Prolaz 4A -> 4B (kontinuirani hodnik)
+  ctx.fillRect(1068, 536, 46, 16);
+  ctx.beginPath();
+  ctx.moveTo(1068, 536); ctx.lineTo(1068, 552);
+  ctx.moveTo(1114, 536); ctx.lineTo(1114, 552);
+  ctx.stroke();
+
+  // Spoj 4B -> URED (Desna vrata sa skretanjem)
+  ctx.fillRect(1068, 598, 20, 18);
+  ctx.beginPath();
+  ctx.moveTo(1114, 598); ctx.lineTo(1114, 616); ctx.lineTo(1076, 616);
+  ctx.moveTo(1068, 584); ctx.lineTo(1068, 602); ctx.lineTo(1076, 602);
+  ctx.stroke();
+
+  // 3. SOBE (Blueprint zidovi s jasnim nazivima)
+  const rooms = [
+    { id: '1A', name: 'BINA',       x: 1005, y: 355, w: 80,  h: 42 },
+    { id: '1B', name: 'SALA',       x: 986,  y: 412, w: 118, h: 56 },
+    { id: '5',  name: 'BACKSTAGE',  x: 916,  y: 394, w: 58,  h: 48 },
+    { id: '1C', name: 'COVE',       x: 924,  y: 456, w: 58,  h: 44 },
+    { id: '7',  name: 'TOALETI',    x: 1144, y: 404, w: 62,  h: 48 },
+    { id: '6',  name: 'KUHINJA',    x: 1144, y: 470, w: 62,  h: 48 },
+    { id: '3',  name: 'ŠPAJZA',     x: 916,  y: 532, w: 58,  h: 44 },
+    { id: '2A', name: 'LIJEVI',     x: 984,  y: 486, w: 46,  h: 52 },
+    { id: '2B', name: 'KUT LIJEVO', x: 984,  y: 550, w: 46,  h: 48 },
+    { id: '4A', name: 'DESNI',      x: 1068, y: 486, w: 46,  h: 52 },
+    { id: '4B', name: 'KUT DESNO',  x: 1068, y: 550, w: 46,  h: 48 }
+  ];
+
+  rooms.forEach(r => {
+    ctx.fillStyle = 'rgba(10, 32, 20, 0.65)';
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+
+    ctx.strokeStyle = '#2ee860';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+
+    ctx.fillStyle = 'rgba(130, 255, 160, 0.8)';
+    ctx.font = 'bold 8px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(r.name, r.x + r.w / 2, r.y + 9);
+  });
+
+  // 4. URED (YOU / VI) - Centralna pozicija igrača s otvorima za vrata
+  const uX = 1022, uY = 602, uW = 54, uH = 42;
+  ctx.fillStyle = '#143820';
+  ctx.fillRect(uX, uY, uW, uH);
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  // Gornji i donji zid
+  ctx.moveTo(uX, uY); ctx.lineTo(uX + uW, uY);
+  ctx.moveTo(uX, uY + uH); ctx.lineTo(uX + uW, uY + uH);
+  // Lijevi zid s otvorom za vrata
+  ctx.moveTo(uX, uY); ctx.lineTo(uX, uY + 6);
+  ctx.moveTo(uX, uY + 28); ctx.lineTo(uX, uY + uH);
+  // Desni zid s otvorom za vrata
+  ctx.moveTo(uX + uW, uY); ctx.lineTo(uX + uW, uY + 6);
+  ctx.moveTo(uX + uW, uY + 28); ctx.lineTo(uX + uW, uY + uH);
+  ctx.stroke();
+
+  // Status roletni ureda na tlocrtu (crvena blokada ako su spuštene!)
+  if (state.leftDoorClosed) {
+    ctx.strokeStyle = '#ff2222';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(uX, uY + 7); ctx.lineTo(uX, uY + 27); ctx.stroke();
+  }
+  if (state.rightDoorClosed) {
+    ctx.strokeStyle = '#ff2222';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(uX + uW, uY + 7); ctx.lineTo(uX + uW, uY + 27); ctx.stroke();
+  }
+
+  // Pulsirajući indikator "VI / YOU"
+  const pulse = (Math.sin(Date.now() * 0.007) + 1) * 0.5;
+  ctx.fillStyle = `rgba(50, 255, 90, ${0.4 + pulse * 0.5})`;
+  ctx.beginPath();
+  ctx.arc(uX + uW / 2, uY + 18, 4 + pulse * 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 9px Courier New';
   ctx.textAlign = 'center';
-  ctx.fillText('URED', 1053, 635);
+  ctx.fillText('URED', uX + uW / 2, uY + 34);
 
-  // Crtanje svih 11 kamera na tlocrtu
+  // 5. RADARSKI SCANLINE
+  state.radarScanY = ((state.radarScanY || 0) + 0.6) % mapH;
+  const scanGrad = ctx.createLinearGradient(mapX, mapY + state.radarScanY, mapX, mapY + state.radarScanY + 16);
+  scanGrad.addColorStop(0, 'rgba(51, 255, 85, 0.16)');
+  scanGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = scanGrad;
+  ctx.fillRect(mapX, mapY + state.radarScanY, mapW, 16);
+
+  // 6. DUGMAD KAMERA (Interaktivni gumbi s jasnim statusom)
   Object.values(CAMERAS).forEach(cam => {
     const isSelected = state.currentCam === cam.id;
-    ctx.fillStyle = isSelected ? '#33ff55' : '#1c2420';
-    ctx.strokeStyle = isSelected ? '#fff' : '#33ff55';
-    ctx.lineWidth = 2;
-    ctx.fillRect(cam.x - 24, cam.y - 14, 48, 28);
-    ctx.strokeRect(cam.x - 24, cam.y - 14, 48, 28);
+    const bW = 44;
+    const bH = 22;
+    const bx = cam.x - bW / 2;
+    const by = cam.y - bH / 2 + 5;
 
-    ctx.fillStyle = isSelected ? '#000' : '#fff';
-    ctx.font = 'bold 11px Courier New';
+    if (isSelected) {
+      ctx.fillStyle = '#33ff55';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#33ff55';
+      ctx.shadowBlur = 8;
+    } else {
+      ctx.fillStyle = '#102218';
+      ctx.strokeStyle = '#28a846';
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.fillRect(bx, by, bW, bH);
+    ctx.strokeRect(bx, by, bW, bH);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = isSelected ? '#000000' : '#ffffff';
+    ctx.font = 'bold 10px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText(`CAM ${cam.id}`, cam.x, cam.y + 4);
+    ctx.fillText(`CAM ${cam.id}`, cam.x, by + 15);
   });
+
+  ctx.restore();
 }
 
 // ----------------------------------------------------------------------------
@@ -2300,28 +2852,39 @@ function renderScreen() {
     return;
   }
 
+  if (state.screen === 'NIGHT_INTRO') {
+    renderNightIntro(ctx);
+    return;
+  }
+
   if (state.screen === 'PLAYING') {
-    if (state.camOpen) {
+    if (state.monitorAnim >= 1.0) {
       renderCCTV();
-    } else {
+      if (state.camStaticTimer > 0) renderCamStaticGlitch(ctx);
+    } else if (state.monitorAnim <= 0.0) {
       renderOffice();
+      if (state.goldenFreddy && state.goldenFreddy.inOffice && !state.powerOut) {
+        renderGoldenHallucinations(ctx);
+      }
+    } else {
+      // Prijelazna animacija podizanja/spuštanja CCTV monitora
+      renderOffice();
+      renderMonitorFlip(ctx);
     }
     return;
   }
 
   if (state.screen === 'JUMPSCARE') {
-    // Ekstremna trešnja ekrana i krik lika
-    ctx.fillStyle = Math.floor(state.jumpscareTimer * 28) % 2 === 0 ? '#2b0000' : '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (state.jumpscareChar && state.jumpscareChar.id === 'golden') {
+      drawGoldenJumpscare(ctx);
+      return;
+    }
+    drawHorrorJumpscare(ctx);
+    return;
+  }
 
-    const shakeX = (Math.random() - 0.5) * 48;
-    const shakeY = (Math.random() - 0.5) * 48;
-    drawCharacterPortrait(ctx, state.jumpscareChar, canvas.width / 2 + shakeX, canvas.height / 2 + shakeY, 210, true);
-
-    ctx.fillStyle = '#ff2222';
-    ctx.font = 'bold 36px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText(`"${state.jumpscareChar.cry}"`, canvas.width / 2, canvas.height - 65);
+  if (state.screen === 'CRASH') {
+    renderCrashScreen(ctx);
     return;
   }
 
@@ -2387,6 +2950,719 @@ function renderScreen() {
 }
 
 // ----------------------------------------------------------------------------
+// 10.A ANIMACIJE: NOĆNI INTRO (12:00 AM), MONITOR FLIP I HOROR JUMPSCAREOVI
+// ----------------------------------------------------------------------------
+function renderNightIntro(ctx) {
+  const W = canvas.width;
+  const H = canvas.height;
+  const t = state.nightIntroTimer;
+
+  // Duboka crna CRT pozadina
+  ctx.fillStyle = '#020305';
+  ctx.fillRect(0, 0, W, H);
+
+  // Retro horizontalne CRT scanlines
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  for (let y = 0; y < H; y += 4) {
+    ctx.fillRect(0, y, W, 2);
+  }
+
+  // Fade alpha: 0..0.4s fade-in, 0.4..1.8s full, 1.8..2.4s fade-out
+  let alpha = 1.0;
+  if (t < 0.4) {
+    alpha = t / 0.4;
+  } else if (t > 1.8) {
+    alpha = Math.max(0, (2.4 - t) / 0.6);
+  }
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Digitalni sat 12:00 AM sa suptilnim neonskim sjajem
+  const showColon = Math.floor(t * 3.5) % 2 === 0;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = '#66ccff';
+  ctx.shadowBlur = 14;
+  ctx.font = 'bold 76px "Courier New", Courier, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(showColon ? '12:00 AM' : '12 00 AM', W / 2, H / 2 - 35);
+  ctx.shadowBlur = 0;
+
+  // Naziv noći (1. Noć, 2. Noć...)
+  let nightTitle = `${state.selectedNight}. NOĆ`;
+  let engSub = `${state.selectedNight}st Night`;
+  if (state.selectedNight === 2) engSub = '2nd Night';
+  else if (state.selectedNight === 3) engSub = '3rd Night';
+  else if (state.selectedNight === 4) engSub = '4th Night';
+  else if (state.selectedNight === 5) engSub = '5th Night (FINAL SHIFT)';
+  else if (state.selectedNight === 6) { nightTitle = 'CUSTOM NIGHT'; engSub = 'Custom Night'; }
+
+  ctx.fillStyle = '#dddddd';
+  ctx.font = 'bold 32px "Courier New", Courier, monospace';
+  ctx.fillText(nightTitle, W / 2, H / 2 + 35);
+
+  ctx.fillStyle = '#778899';
+  ctx.font = '16px "Courier New", Courier, monospace';
+  ctx.fillText(`[ ${engSub} ]`, W / 2, H / 2 + 70);
+
+  // Donja diskretna uputa za nestrpljive igrače
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.font = '12px "Courier New", Courier, monospace';
+  ctx.fillText('[ KLIKNI MIŠEM ZA PRESKAKANJE ]', W / 2, H - 42);
+
+  ctx.restore();
+}
+
+function renderMonitorFlip(ctx) {
+  const W = canvas.width;
+  const H = canvas.height;
+  const anim = state.monitorAnim || 0;
+  const flipY = (1.0 - anim) * H;
+
+  ctx.save();
+  ctx.translate(0, flipY);
+
+  // Monitor feed u pokretu
+  renderCCTV();
+
+  // Metalno oklopljeno kućište CRT monitora
+  ctx.strokeStyle = '#14161b';
+  ctx.lineWidth = 16;
+  ctx.strokeRect(0, 0, W, H);
+
+  ctx.fillStyle = '#242830';
+  ctx.fillRect(0, 0, W, 22);
+  ctx.fillRect(0, H - 22, W, 22);
+  ctx.fillStyle = '#0a0c0f';
+  ctx.fillRect(W / 2 - 90, 4, 180, 14);
+
+  // Statički bljesak tijekom podizanja
+  for (let i = 0; i < 50; i++) {
+    ctx.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,0.22)' : 'rgba(51,255,85,0.18)';
+    ctx.fillRect(Math.random() * W, Math.random() * H, Math.random() * 200, 2.5);
+  }
+
+  ctx.restore();
+}
+
+function renderCamStaticGlitch(ctx) {
+  const W = canvas.width;
+  const H = canvas.height;
+  for (let i = 0; i < 75; i++) {
+    ctx.fillStyle = Math.random() < 0.5 ? 'rgba(255, 255, 255, 0.45)' : 'rgba(51, 255, 85, 0.35)';
+    ctx.fillRect(Math.random() * W, Math.random() * H, Math.random() * 260, Math.random() * 5 + 1);
+  }
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawHorrorJumpscare(ctx) {
+  const W = canvas.width;
+  const H = canvas.height;
+  const t = state.jumpscareTimer;
+  const ch = state.jumpscareChar || getCharById('mudja');
+
+  // 1. Ekstremni stroboskop (crno, tamno crveno, krvavo crveno, povremena bijela munja)
+  const flashCycle = Math.floor(t * 34) % 4;
+  const colors = ['#050000', '#2d0004', '#000000', '#550008'];
+  if (Math.sin(t * 50) > 0.94) {
+    ctx.fillStyle = '#ffffff';
+  } else {
+    ctx.fillStyle = colors[flashCycle];
+  }
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. VHS film grain i scanlines
+  for (let i = 0; i < 35; i++) {
+    ctx.fillStyle = Math.random() < 0.5 ? 'rgba(255, 30, 30, 0.28)' : 'rgba(255, 255, 255, 0.18)';
+    ctx.fillRect(0, Math.random() * H, W, Math.random() * 4 + 1);
+  }
+
+  // 3. Agresivni lunge (animatronik juri ravno u kameru prema licu igrača)
+  const lunge = 1.15 + Math.min(1.25, t * 1.7);
+  const shakeIntensity = 38 + t * 24;
+  const shakeX = (Math.random() - 0.5) * shakeIntensity;
+  const shakeY = (Math.random() - 0.5) * shakeIntensity;
+
+  const headAngle = Math.sin(t * 40) * 0.22;
+  const jawDrop = Math.abs(Math.sin(t * 34)) * 36; // 17 Hz snapping jaw!
+
+  const cx = W / 2 + shakeX;
+  const cy = H / 2 + shakeY - 15;
+  const baseRadius = 140 * lunge;
+
+  // 4. CHROMATIC ABERRATION (RGB 3D Split - crveni i cijan pomak)
+  ctx.save();
+  ctx.globalAlpha = 0.38;
+  drawJumpscareFace(ctx, ch, cx - 18, cy, baseRadius, jawDrop, headAngle, '#ff1111');
+  drawJumpscareFace(ctx, ch, cx + 18, cy, baseRadius, jawDrop, headAngle, '#00ffff');
+  ctx.restore();
+
+  // 5. Glavni visokodeteljan horor animatronik
+  drawJumpscareFace(ctx, ch, cx, cy, baseRadius, jawDrop, headAngle, null);
+
+  // 6. Subliminalni horor flash tekst
+  if (Math.sin(t * 44) > 0.82) {
+    ctx.save();
+    ctx.fillStyle = Math.random() < 0.5 ? '#ffffff' : '#ff0000';
+    ctx.font = 'bold 36px Courier New';
+    ctx.textAlign = 'center';
+    const subWords = ['TO JE KRAJ!', 'NEMA SPAVANJA!', '1987', 'BANOVAN!', 'KAFANA'];
+    ctx.fillText(subWords[Math.floor(Math.random() * subWords.length)], W / 2, 85);
+    ctx.restore();
+  }
+
+  // 7. Krik lika na dnu
+  ctx.fillStyle = '#ff2222';
+  ctx.font = 'bold 34px Courier New';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#000';
+  ctx.shadowBlur = 10;
+  ctx.fillText(`"${ch.cry}"`, W / 2 + shakeX * 0.3, H - 55);
+  ctx.shadowBlur = 0;
+}
+
+function drawJumpscareFace(ctx, ch, cx, cy, radius, jawDrop, headAngle, tintColor) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(headAngle);
+
+  const mainColor = tintColor || ch.color;
+  const hatColor = tintColor || ch.hatColor;
+
+  // 1. Endoskeleton vrat i hidraulične cijevi
+  ctx.fillStyle = tintColor || '#1a1c22';
+  ctx.fillRect(-radius * 0.22, radius * 0.6, radius * 0.44, radius * 0.6);
+  ctx.strokeStyle = tintColor || '#444b55';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(-radius * 0.22, radius * 0.6, radius * 0.44, radius * 0.6);
+
+  // Viseće žice na vratu
+  if (!tintColor) {
+    const wireColors = ['#ff2222', '#ffbb00', '#00ccff'];
+    wireColors.forEach((wc, wi) => {
+      ctx.strokeStyle = wc;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.15 + wi * (radius * 0.15), radius * 0.7);
+      ctx.quadraticCurveTo(-radius * 0.2 + wi * (radius * 0.2), radius * 1.1, -radius * 0.1 + wi * (radius * 0.1), radius * 1.2);
+      ctx.stroke();
+    });
+  }
+
+  // 2. DONJA ČELJUST KOJA SE OTVARA I GRIZE (Snapping Jaw)
+  ctx.save();
+  ctx.translate(0, jawDrop * (radius / 140));
+
+  // Šupljina otvorenih usta / ponor grla
+  ctx.fillStyle = tintColor || '#020101';
+  ctx.fillRect(-radius * 0.52, radius * 0.18, radius * 1.04, radius * 0.55);
+
+  // Oštri donji endoskeleton zubi
+  ctx.fillStyle = tintColor || '#d8dbe2';
+  ctx.strokeStyle = tintColor || '#111';
+  ctx.lineWidth = 1.5;
+  const toothW = radius * 0.11;
+  for (let tx = -radius * 0.44; tx <= radius * 0.35; tx += toothW) {
+    ctx.beginPath();
+    ctx.moveTo(tx, radius * 0.62);
+    ctx.lineTo(tx + toothW / 2, radius * 0.38);
+    ctx.lineTo(tx + toothW, radius * 0.62);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+
+  // Metalna vilica / brada
+  ctx.fillStyle = mainColor;
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(-radius * 0.5, radius * 0.55, radius * 1.0, radius * 0.35, 12);
+  } else {
+    ctx.rect(-radius * 0.5, radius * 0.55, radius * 1.0, radius * 0.35);
+  }
+  ctx.fill();
+  ctx.strokeStyle = tintColor || '#0a0a0f';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.restore();
+
+  // 3. GORNJA GLAVA
+  ctx.fillStyle = mainColor;
+  ctx.beginPath();
+  ctx.arc(0, -radius * 0.05, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = tintColor || '#0a0a0f';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Oštri gornji endoskeleton zubi
+  ctx.fillStyle = tintColor || '#e8ecf2';
+  ctx.strokeStyle = tintColor || '#111';
+  ctx.lineWidth = 1.5;
+  for (let tx = -radius * 0.44; tx <= radius * 0.35; tx += toothW) {
+    ctx.beginPath();
+    ctx.moveTo(tx, radius * 0.22);
+    ctx.lineTo(tx + toothW / 2, radius * 0.42);
+    ctx.lineTo(tx + toothW, radius * 0.22);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+
+  // 4. OČNE ŠUPLJINE I TITRAJUĆE HOROR OČI
+  const eyeOffX = radius * 0.38;
+  const eyeY = -radius * 0.18;
+  const eyeR = radius * 0.28;
+
+  // Crne duboke šupljine
+  ctx.fillStyle = tintColor || '#000000';
+  ctx.beginPath();
+  ctx.arc(-eyeOffX, eyeY, eyeR, 0, Math.PI * 2);
+  ctx.arc(eyeOffX, eyeY, eyeR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = tintColor || '#181010';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Krvave kapilare oko očiju
+  if (!tintColor) {
+    ctx.strokeStyle = 'rgba(255, 30, 30, 0.55)';
+    ctx.lineWidth = 1.5;
+    [-eyeOffX, eyeOffX].forEach(ex => {
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+        ctx.beginPath();
+        ctx.moveTo(ex + Math.cos(a) * eyeR * 0.4, eyeY + Math.sin(a) * eyeR * 0.4);
+        ctx.lineTo(ex + Math.cos(a) * eyeR * 0.95, eyeY + Math.sin(a) * eyeR * 0.95);
+        ctx.stroke();
+      }
+    });
+  }
+
+  // Zjenice koje gore u tami
+  const jitterX = (Math.random() - 0.5) * 4;
+  const jitterY = (Math.random() - 0.5) * 4;
+  const pupilR = radius * 0.08;
+
+  if (tintColor) {
+    ctx.fillStyle = tintColor;
+  } else if (ch.id === 'golden') {
+    ctx.fillStyle = '#ffffff';
+  } else if (ch.id === 'omco') {
+    ctx.fillStyle = '#ff0000';
+  } else {
+    ctx.fillStyle = Math.random() < 0.2 ? '#ffffff' : '#ff2222';
+  }
+
+  ctx.beginPath();
+  ctx.arc(-eyeOffX + jitterX, eyeY + jitterY, pupilR, 0, Math.PI * 2);
+  ctx.arc(eyeOffX + jitterX, eyeY + jitterY, pupilR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sićušne bijele jezgre u zjenicama
+  if (!tintColor) {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-eyeOffX + jitterX, eyeY + jitterY, pupilR * 0.4, 0, Math.PI * 2);
+    ctx.arc(eyeOffX + jitterX, eyeY + jitterY, pupilR * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 5. OBRVE / MRŠTENJE
+  ctx.strokeStyle = tintColor || '#0a0a0d';
+  ctx.lineWidth = radius * 0.1;
+  ctx.beginPath();
+  ctx.moveTo(-eyeOffX - eyeR * 0.8, eyeY - eyeR * 0.8);
+  ctx.lineTo(-eyeOffX + eyeR * 0.7, eyeY - eyeR * 0.25);
+  ctx.moveTo(eyeOffX + eyeR * 0.8, eyeY - eyeR * 0.8);
+  ctx.lineTo(eyeOffX - eyeR * 0.7, eyeY - eyeR * 0.25);
+  ctx.stroke();
+
+  // 6. SPECIFIČNI DETALJI LIKOVA
+  if (ch.id === 'mudja') {
+    ctx.fillStyle = hatColor;
+    ctx.fillRect(-radius * 0.32, -radius * 1.48, radius * 0.64, radius * 0.5);
+    ctx.fillRect(-radius * 0.46, -radius * 1.02, radius * 0.92, radius * 0.12);
+    ctx.fillStyle = mainColor;
+    ctx.beginPath();
+    ctx.arc(-radius * 0.75, -radius * 0.75, radius * 0.3, 0, Math.PI * 2);
+    ctx.arc(radius * 0.75, -radius * 0.75, radius * 0.3, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  } else if (ch.id === 'baka') {
+    const earWiggle = Math.sin(Date.now() * 0.04) * 0.15;
+    ctx.save();
+    ctx.rotate(earWiggle);
+    ctx.fillStyle = mainColor;
+    ctx.fillRect(-radius * 0.65, -radius * 1.85, radius * 0.28, radius * 0.95);
+    ctx.fillRect(radius * 0.37, -radius * 1.85, radius * 0.28, radius * 0.95);
+    ctx.fillStyle = tintColor || '#ff99cc';
+    ctx.fillRect(-radius * 0.57, -radius * 1.75, radius * 0.12, radius * 0.75);
+    ctx.fillRect(radius * 0.45, -radius * 1.75, radius * 0.12, radius * 0.75);
+    ctx.restore();
+  } else if (ch.id === 'choda') {
+    ctx.fillStyle = tintColor || '#ff8800';
+    ctx.beginPath();
+    ctx.ellipse(0, radius * 0.15, radius * 0.36, radius * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  } else if (ch.id === 'omco') {
+    ctx.fillStyle = tintColor || '#111';
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.8, -radius * 0.6);
+    ctx.lineTo(radius * 0.8, -radius * 0.6);
+    ctx.lineTo(0, -radius * 1.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = tintColor || '#d0d0d8';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(radius * 0.85, radius * 0.4, radius * 0.35, 0, Math.PI * 1.5);
+    ctx.stroke();
+  } else if (ch.id === 'puppet') {
+    ctx.fillStyle = tintColor || '#7b1fa2';
+    ctx.fillRect(-eyeOffX - 6, eyeY + 14, 12, radius * 0.7);
+    ctx.fillRect(eyeOffX - 6, eyeY + 14, 12, radius * 0.7);
+    ctx.fillStyle = tintColor || '#dd2c00';
+    ctx.beginPath();
+    ctx.arc(-radius * 0.65, radius * 0.25, radius * 0.18, 0, Math.PI * 2);
+    ctx.arc(radius * 0.65, radius * 0.25, radius * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ----------------------------------------------------------------------------
+// 10.B AUTENTIČNE MEHANIKE I VIZUALI ZA GOLDEN FREDDYJA (ZLATNI MUĐA)
+// ----------------------------------------------------------------------------
+function checkGoldenFreddyPoster() {
+  if (!state.goldenFreddy || state.goldenFreddy.inOffice || state.goldenFreddy.posterActive) return;
+  // Šansa za pojavu plakata Zlatnog Muđe na CAM 2B (~3.5% po prebacivanju, 6% na Noći 5 i Custom)
+  const chance = state.selectedNight >= 5 ? 0.06 : 0.035;
+  if (Math.random() < chance) {
+    state.goldenFreddy.posterActive = true;
+  }
+}
+
+function triggerGoldenJumpscare() {
+  if (state.screen !== 'PLAYING') return;
+  state.screen = 'JUMPSCARE';
+  state.camOpen = false;
+  state.windingTape = false;
+  state.jumpscareChar = getCharById('golden') || {
+    id: 'golden',
+    name: 'Zlatni Muđa',
+    cry: 'TO SAM JA! (IT\'S ME)',
+    color: '#d4af37',
+    hatColor: '#0a0b12',
+    pitch: 110
+  };
+  state.jumpscareTimer = 0;
+  state.endReason = 'ZLATNI MUĐA TE PREUZEO (NISI DIGAO MONITOR NA VRIJEME)';
+  document.getElementById('hud-layer').classList.add('hidden');
+  document.getElementById('phone-box').classList.add('hidden');
+  audio.stopPhoneSpeech();
+  audio.updateContinuousAudio(false, false, false, false);
+  audio.playGoldenJumpscareScream();
+
+  if (state.devStats) {
+    state.devStats.outcome = 'PORAZ: ZLATNI MUĐA (GOLDEN FREDDY)';
+    state.devStats.remainingPower = state.power;
+    if (state.devStats.enabled) printDevSummary();
+  }
+}
+
+function drawGoldenFreddySlumped(ctx, x, y, scale = 1.0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  // Kontaktna sjena na podu
+  const shadowGrad = ctx.createRadialGradient(0, 10, 10, 0, 10, 110);
+  shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+  shadowGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.45)');
+  shadowGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = shadowGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, 10, 110, 42, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Noge sklupčane na podu
+  ctx.fillStyle = '#b38f26';
+  ctx.strokeStyle = '#221a00';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(-55, 0, 38, 22, -0.3, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(55, 0, 38, 22, 0.3, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // Torzo nagnut prema naprijed
+  const torsoGrad = ctx.createLinearGradient(0, -90, 0, 0);
+  torsoGrad.addColorStop(0, '#e6b800');
+  torsoGrad.addColorStop(0.7, '#c99700');
+  torsoGrad.addColorStop(1, '#8a6800');
+  ctx.fillStyle = torsoGrad;
+  ctx.beginPath();
+  ctx.moveTo(-50, 0);
+  ctx.lineTo(-44, -85);
+  ctx.quadraticCurveTo(0, -100, 44, -85);
+  ctx.lineTo(50, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#221a00';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Trbuh
+  ctx.fillStyle = '#f5cc33';
+  ctx.beginPath();
+  ctx.ellipse(0, -38, 30, 36, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crna mašna na vratu
+  ctx.fillStyle = '#0c0d12';
+  ctx.beginPath();
+  ctx.moveTo(0, -78);
+  ctx.lineTo(-18, -88);
+  ctx.lineTo(-18, -68);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0, -78);
+  ctx.lineTo(18, -88);
+  ctx.lineTo(18, -68);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, -78, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ruke položene mlohavo na pod
+  ctx.fillStyle = '#c99700';
+  ctx.strokeStyle = '#221a00';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.ellipse(-65, -35, 16, 45, 0.45, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(65, -35, 16, 45, -0.45, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // Šape
+  ctx.beginPath();
+  ctx.arc(-82, 5, 15, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(82, 5, 15, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // Mikrofon kraj desne šape
+  ctx.fillStyle = '#666';
+  ctx.fillRect(88, -2, 22, 6);
+  ctx.fillStyle = '#999';
+  ctx.beginPath();
+  ctx.arc(114, 1, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Glava nagnuta u stranu
+  ctx.save();
+  ctx.translate(6, -112);
+  ctx.rotate(0.38);
+
+  // Uši
+  ctx.fillStyle = '#c99700';
+  ctx.strokeStyle = '#221a00';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(-42, -45, 16, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#181200';
+  ctx.beginPath();
+  ctx.arc(-42, -45, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#c99700';
+  ctx.beginPath();
+  ctx.arc(42, -45, 16, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#181200';
+  ctx.beginPath();
+  ctx.arc(42, -45, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lubanja
+  const headGrad = ctx.createRadialGradient(0, -10, 10, 0, 0, 52);
+  headGrad.addColorStop(0, '#f2ca38');
+  headGrad.addColorStop(0.7, '#d4a017');
+  headGrad.addColorStop(1, '#8f6800');
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, 48, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#221a00';
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+
+  // Njuška
+  ctx.fillStyle = '#fce268';
+  ctx.beginPath();
+  ctx.ellipse(-16, 12, 18, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(16, 12, 18, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Nos
+  ctx.fillStyle = '#0a0a0f';
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 9, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Čeljust
+  ctx.fillStyle = '#060608';
+  ctx.fillRect(-22, 24, 44, 18);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  for (let z = -16; z <= 16; z += 8) {
+    ctx.fillStyle = '#ddd';
+    ctx.fillRect(z - 2, 25, 5, 6);
+  }
+
+  // Crne očne šupljine
+  ctx.fillStyle = '#000000';
+  ctx.beginPath();
+  ctx.arc(-20, -12, 14, 0, Math.PI * 2);
+  ctx.arc(20, -12, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#1a1400';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Sićušne svijetleće bijele točke
+  const eyeFlicker = Math.sin(Date.now() * 0.03) > -0.7;
+  if (eyeFlicker) {
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(-20, -12, 2.5, 0, Math.PI * 2);
+    ctx.arc(20, -12, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Crni cilindar
+  ctx.fillStyle = '#0a0b10';
+  ctx.fillRect(-28, -50, 56, 7);
+  ctx.fillRect(-18, -78, 36, 28);
+  ctx.fillStyle = '#d4af37';
+  ctx.fillRect(-18, -54, 36, 4);
+
+  ctx.restore();
+  ctx.restore();
+}
+
+function renderGoldenHallucinations(ctx) {
+  const W = canvas.width;
+  const H = canvas.height;
+  const t = Date.now() * 0.001;
+
+  // Brzi bljeskovi teksta "IT'S ME" / "TO SAM JA!"
+  const showText = Math.sin(t * 22) > 0.05;
+  if (showText) {
+    ctx.save();
+    const words = ["IT'S ME", "TO SAM JA!", "1987", "IT'S ME", "TO SAM JA!"];
+    const w = words[Math.floor(Math.random() * words.length)];
+    ctx.fillStyle = Math.random() < 0.5 ? '#ffffff' : '#ff2222';
+    ctx.font = `bold ${Math.floor(32 + Math.random() * 32)}px Courier New`;
+    ctx.textAlign = 'center';
+    const rx = 150 + Math.random() * (W - 300);
+    const ry = 100 + Math.random() * (H - 200);
+    ctx.fillText(w, rx, ry);
+    ctx.restore();
+  }
+
+  // Negativni kratki bljesak
+  if (Math.sin(t * 37) > 0.88) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+}
+
+function drawGoldenJumpscare(ctx) {
+  const W = canvas.width;
+  const H = canvas.height;
+  const shakeX = (Math.random() - 0.5) * 45;
+  const shakeY = (Math.random() - 0.5) * 45;
+
+  ctx.fillStyle = Math.floor(state.jumpscareTimer * 24) % 2 === 0 ? '#1f1500' : '#050200';
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = `rgba(${Math.random() > 0.5 ? '255,215,0' : '255,0,0'}, ${Math.random() * 0.25})`;
+    ctx.fillRect(Math.random() * W, Math.random() * H, Math.random() * 200, Math.random() * 12);
+  }
+
+  const gfChar = getCharById('golden') || { color: '#d4af37', hatColor: '#0a0b12' };
+  drawCharacterPortrait(ctx, gfChar, W / 2 + shakeX, H / 2 + shakeY - 10, 310, true);
+
+  ctx.fillStyle = Math.random() < 0.5 ? '#ffff00' : '#ff1111';
+  ctx.font = 'bold 44px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('IT\'S ME // TO SAM JA!', W / 2 + (Math.random() - 0.5) * 16, H - 45);
+}
+
+function renderCrashScreen(ctx) {
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.fillStyle = '#000005';
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < 400; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    ctx.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,0.18)' : 'rgba(255,0,0,0.18)';
+    ctx.fillRect(x, y, Math.random() * 80, 2);
+  }
+
+  ctx.fillStyle = '#ff2222';
+  ctx.font = 'bold 36px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('FATAL EXCEPTION 1987: KAFANA.EXE CRASHED', W / 2, 260);
+
+  ctx.fillStyle = '#eeddbb';
+  ctx.font = '24px Courier New';
+  ctx.fillText('*** TO SAM JA! (IT\'S ME) ***', W / 2, 330);
+
+  ctx.fillStyle = '#888';
+  ctx.font = '16px Courier New';
+  ctx.fillText('A supernatural anomaly was detected in Office memory.', W / 2, 400);
+  ctx.fillText('Nisi podigao monitor na vrijeme i Zlatni Muđa je srušio igru.', W / 2, 430);
+
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = 'bold 18px Courier New';
+  ctx.fillText('[ KLIKNI BILO GDJE ZA POVRATAK U GLAVNI MENI ]', W / 2, 540);
+}
+
+window.triggerGoldenFreddy = () => {
+  if (state.screen !== 'PLAYING') return 'Moraš pokrenuti smjenu (PLAYING)!';
+  state.goldenFreddy.posterActive = false;
+  state.goldenFreddy.inOffice = true;
+  state.goldenFreddy.timer = 0;
+  audio.playGoldenLaugh();
+  return '⚠️ Zlatni Muđa (Golden Freddy) se stvorio u uredu! Podigni monitor za obranu.';
+};
+window.triggerGoldenPoster = () => {
+  if (!state.goldenFreddy) return 'Igra nije pokrenuta!';
+  state.goldenFreddy.posterActive = true;
+  return '⚠️ Plakat Zlatnog Muđe je aktivan na CAM 2B! Spusti monitor nakon gledanja za pojavu u uredu.';
+};
+
+// ----------------------------------------------------------------------------
 // 11. KONTROLE MIŠA I TIPKOVNICE
 // ----------------------------------------------------------------------------
 function getCanvasMousePos(e) {
@@ -2407,8 +3683,9 @@ canvas.addEventListener('mousemove', e => {
     let isClickable = false;
     if (state.camOpen) {
       if (pos.x >= 59 && pos.x <= 421 && pos.y >= 599 && pos.y <= 637) isClickable = true;
+      if (state.currentCam === '2B' && pos.x >= 170 && pos.x <= 285 && pos.y >= 180 && pos.y <= 325) isClickable = true;
       for (const cam of Object.values(CAMERAS)) {
-        if (pos.x >= cam.x - 26 && pos.x <= cam.x + 26 && pos.y >= cam.y - 16 && pos.y <= cam.y + 16) {
+        if (pos.x >= cam.x - 24 && pos.x <= cam.x + 24 && pos.y >= cam.y - 12 && pos.y <= cam.y + 18) {
           isClickable = true;
           break;
         }
@@ -2433,9 +3710,18 @@ canvas.addEventListener('mousedown', e => {
   audio.init();
   const pos = getCanvasMousePos(e);
 
-  if (state.screen === 'GAMEOVER') {
+  if (state.screen === 'NIGHT_INTRO') {
+    state.nightIntroTimer = state.nightIntroMax;
+    return;
+  }
+
+  if (state.screen === 'GAMEOVER' || state.screen === 'CRASH') {
     state.screen = 'MENU';
     document.getElementById('menu-screen').classList.remove('hidden');
+    document.getElementById('hud-layer').classList.add('hidden');
+    document.getElementById('phone-box').classList.add('hidden');
+    audio.updateContinuousAudio(false, false, false, false);
+    audio.stopPhoneSpeech();
     return;
   }
 
@@ -2453,10 +3739,21 @@ canvas.addEventListener('mousedown', e => {
   if (state.screen !== 'PLAYING') return;
 
   if (state.camOpen) {
+    // Klik na plakat na CAM 2B ("HONK" Easter Egg + promjena plakata)
+    if (state.currentCam === '2B' && pos.x >= 170 && pos.x <= 285 && pos.y >= 180 && pos.y <= 325) {
+      audio.playHonk();
+      if (state.goldenFreddy) {
+        state.goldenFreddy.posterActive = !state.goldenFreddy.posterActive;
+      }
+      return;
+    }
+
     // Provjeri klik na gumb kazetofona (CAM 5)
     if (pos.x >= 59 && pos.x <= 421 && pos.y >= 599 && pos.y <= 637) {
       if (state.currentCam !== '5') {
         state.currentCam = '5';
+        state.camStaticTimer = 0.16;
+        audio.playCamStaticBurst();
         audio.playCamBlip();
       } else {
         state.windingTape = true;
@@ -2466,9 +3763,12 @@ canvas.addEventListener('mousedown', e => {
 
     // Provjeri klik na kamere na tlocrtu
     for (const cam of Object.values(CAMERAS)) {
-      if (pos.x >= cam.x - 26 && pos.x <= cam.x + 26 && pos.y >= cam.y - 16 && pos.y <= cam.y + 16) {
+      if (pos.x >= cam.x - 24 && pos.x <= cam.x + 24 && pos.y >= cam.y - 12 && pos.y <= cam.y + 18) {
         state.currentCam = cam.id;
+        state.camStaticTimer = 0.16;
         state.windingTape = false;
+        if (cam.id === '2B') checkGoldenFreddyPoster();
+        audio.playCamStaticBurst();
         audio.playCamBlip();
         return;
       }
@@ -2522,8 +3822,11 @@ window.addEventListener('keydown', e => {
   } else if (['1', '2', '3', '4', '5', '6'].includes(key)) {
     const found = Object.values(CAMERAS).find(c => c.key === key);
     if (found) {
-      if (!state.camOpen) state.camOpen = true;
+      if (!state.camOpen) toggleCameraMonitor();
       state.currentCam = found.id;
+      state.camStaticTimer = 0.16;
+      if (found.id === '2B') checkGoldenFreddyPoster();
+      audio.playCamStaticBurst();
       audio.playCamBlip();
     }
   }
@@ -4136,17 +5439,37 @@ function drawWestCornerCAM2B(ctx) {
   ctx.lineWidth = 4;
   ctx.strokeRect(0, 80, 85, H - 80);
 
-  // Plakat upozorenja
-  ctx.fillStyle = '#eeddbb';
-  ctx.fillRect(180, 190, 95, 125);
-  ctx.fillStyle = '#990000';
-  ctx.font = 'bold 11px Courier New';
-  ctx.fillText('PAZI!', 227, 215);
-  ctx.fillStyle = '#111';
-  ctx.font = '8px Courier New';
-  ctx.fillText('LIJEVA VRATA', 227, 238);
-  ctx.fillText('UREDA SU', 227, 252);
-  ctx.fillText('ODMAH TU!', 227, 266);
+  // Plakat na zidu CAM 2B (FNaF 1 Golden Freddy trigger)
+  if (state.goldenFreddy && state.goldenFreddy.posterActive) {
+    ctx.save();
+    ctx.fillStyle = '#0a0800';
+    ctx.fillRect(175, 185, 105, 135);
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(175, 185, 105, 135);
+
+    const gfChar = getCharById('golden') || { color: '#d4af37', hatColor: '#111' };
+    drawCharacterPortrait(ctx, gfChar, 227, 245, 36, true);
+
+    ctx.fillStyle = '#ff2222';
+    ctx.font = 'bold 12px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText("IT'S ME", 227, 305);
+    ctx.restore();
+  } else {
+    // Normalni plakat upozorenja
+    ctx.fillStyle = '#eeddbb';
+    ctx.fillRect(180, 190, 95, 125);
+    ctx.fillStyle = '#990000';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAZI!', 227, 215);
+    ctx.fillStyle = '#111';
+    ctx.font = '8px Courier New';
+    ctx.fillText('LIJEVA VRATA', 227, 238);
+    ctx.fillText('UREDA SU', 227, 252);
+    ctx.fillText('ODMAH TU!', 227, 266);
+  }
 
   // Viseća žarulja u kavezu koja treperi
   const bulbFlicker = Math.sin(Date.now() * 0.015) > -0.2;
