@@ -692,17 +692,17 @@ const audio = new BalkanAudioEngine();
 // 2. DEFINICIJA SVIH 11 ORIGINALNIH KAMERA I LIKOVA
 // ----------------------------------------------------------------------------
 const CAMERAS = {
-  '1A': { id: '1A', name: 'CAM 1A - Glavni Studio / Bina', x: 1045, y: 378, key: '1' },
-  '1B': { id: '1B', name: 'CAM 1B - Sala Kafane sa Stolovima', x: 1045, y: 444, key: null },
-  '1C': { id: '1C', name: 'CAM 1C - Green Screen Kutak', x: 955, y: 480, key: '2' },
+  '1A': { id: '1A', name: 'CAM 1A - Glavni Studio / Bina', x: 1065, y: 374, key: '1' },
+  '1B': { id: '1B', name: 'CAM 1B - Sala Kafane sa Stolovima', x: 1065, y: 445, key: null },
+  '1C': { id: '1C', name: 'CAM 1C - Green Screen Kutak', x: 942, y: 493, key: '2' },
   '2A': { id: '2A', name: 'CAM 2A - Lijevi Hodnik', x: 1007, y: 512, key: '3' },
-  '2B': { id: '2B', name: 'CAM 2B - Lijevi Kut pred Uredom', x: 1007, y: 574, key: null },
-  '3':  { id: '3',  name: 'CAM 3 - Špajza s Gajbama Piva', x: 945, y: 556, key: null },
-  '4A': { id: '4A', name: 'CAM 4A - Desni Hodnik', x: 1091, y: 512, key: '4' },
-  '4B': { id: '4B', name: 'CAM 4B - Desni Kut pred Uredom', x: 1091, y: 574, key: null },
-  '5':  { id: '5',  name: 'CAM 5 - Backstage & Kazetofon', x: 945, y: 420, key: '6' },
-  '6':  { id: '6',  name: 'CAM 6 - Kuhinja & Roštilj [AUDIO]', x: 1175, y: 494, key: '5' },
-  '7':  { id: '7',  name: 'CAM 7 - Toaleti Kafane', x: 1175, y: 430, key: null }
+  '2B': { id: '2B', name: 'CAM 2B - Lijevi Kut pred Uredom', x: 1007, y: 570, key: null },
+  '3':  { id: '3',  name: 'CAM 3 - Špajza s Gajbama Piva', x: 942, y: 560, key: null },
+  '4A': { id: '4A', name: 'CAM 4A - Desni Hodnik', x: 1122, y: 512, key: '4' },
+  '4B': { id: '4B', name: 'CAM 4B - Desni Kut pred Uredom', x: 1122, y: 570, key: null },
+  '5':  { id: '5',  name: 'CAM 5 - Backstage & Kazetofon', x: 942, y: 430, key: '6' },
+  '6':  { id: '6',  name: 'CAM 6 - Kuhinja & Roštilj [AUDIO]', x: 1187, y: 493, key: '5' },
+  '7':  { id: '7',  name: 'CAM 7 - Toaleti Kafane', x: 1187, y: 430, key: null }
 };
 
 const DEFAULT_CHARACTERS = [
@@ -2601,225 +2601,244 @@ function drawTapeMechanicUI() {
 }
 
 function drawCCTVMap() {
-  const mapX = 905;
-  const mapY = 340;
-  const mapW = 345;
-  const mapH = 326;
-
   ctx.save();
 
-  // 1. CRT Radar pozadina sa suptilnom mrežom
-  ctx.fillStyle = 'rgba(5, 14, 10, 0.92)';
-  ctx.fillRect(mapX, mapY, mapW, mapH);
-  ctx.strokeStyle = '#22cc44';
+  // 1. Suptilna tamna staklena podloga za tlocrt s taktičkim HUD kutovima
+  const mapBackX = 890;
+  const mapBackY = 330;
+  const mapBackW = 370;
+  const mapBackH = 355;
+
+  ctx.fillStyle = 'rgba(6, 12, 18, 0.85)';
+  ctx.fillRect(mapBackX, mapBackY, mapBackW, mapBackH);
+  ctx.strokeStyle = 'rgba(50, 75, 100, 0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(mapBackX, mapBackY, mapBackW, mapBackH);
+
+  // HUD kutne oznake
+  const bLen = 12;
+  ctx.strokeStyle = 'rgba(90, 150, 220, 0.8)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(mapX, mapY, mapW, mapH);
+  // Gornji lijevi
+  ctx.beginPath();
+  ctx.moveTo(mapBackX, mapBackY + bLen); ctx.lineTo(mapBackX, mapBackY); ctx.lineTo(mapBackX + bLen, mapBackY);
+  // Gornji desni
+  ctx.moveTo(mapBackX + mapBackW - bLen, mapBackY); ctx.lineTo(mapBackX + mapBackW, mapBackY); ctx.lineTo(mapBackX + mapBackW, mapBackY + bLen);
+  // Donji lijevi
+  ctx.moveTo(mapBackX, mapBackY + mapBackH - bLen); ctx.lineTo(mapBackX, mapBackY + mapBackH); ctx.lineTo(mapBackX + bLen, mapBackY + mapBackH);
+  // Donji desni
+  ctx.moveTo(mapBackX + mapBackW - bLen, mapBackY + mapBackH); ctx.lineTo(mapBackX + mapBackW, mapBackY + mapBackH); ctx.lineTo(mapBackX + mapBackW, mapBackY + mapBackH - bLen);
+  ctx.stroke();
 
-  // Mreža (Blueprint Grid)
-  ctx.strokeStyle = 'rgba(40, 180, 80, 0.08)';
-  ctx.lineWidth = 1;
-  for (let gx = mapX + 20; gx < mapX + mapW; gx += 20) {
-    ctx.beginPath(); ctx.moveTo(gx, mapY); ctx.lineTo(gx, mapY + mapH); ctx.stroke();
-  }
-  for (let gy = mapY + 20; gy < mapY + mapH; gy += 20) {
-    ctx.beginPath(); ctx.moveTo(mapX, gy); ctx.lineTo(mapX + mapW, gy); ctx.stroke();
-  }
+  // Naslov tlocrta u FNaF terminal stilu
+  ctx.fillStyle = 'rgba(120, 175, 230, 0.75)';
+  ctx.font = 'bold 10px "Courier New", Courier, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('FACILITY MAP // CCTV', mapBackX + 14, mapBackY + 18);
 
-  // 2. TLOCRTNI HODNICI (Povezuju sobe i pokazuju smjer kretanja animatronika)
-  ctx.strokeStyle = '#2ee860';
+  // 2. ISPUNA PODOVA (Blueprint poluprozirna plavkasto-tamna boja)
+  ctx.fillStyle = 'rgba(18, 28, 42, 0.72)';
+
+  // Glavne prostorije
+  ctx.fillRect(1025, 350, 80, 48);   // 1A Bina
+  ctx.fillRect(1045, 398, 40, 17);   // Bina -> Sala vrat
+  ctx.fillRect(985, 415, 160, 60);   // 1B Sala
+  ctx.fillRect(915, 405, 55, 50);    // 5 Backstage
+  ctx.fillRect(970, 422, 15, 20);    // 5 -> Sala
+  ctx.fillRect(915, 468, 55, 50);    // 1C Pirate Cove
+  ctx.fillRect(970, 478, 15, 20);    // 1C -> Lijevi hodnik
+  ctx.fillRect(915, 535, 55, 50);    // 3 Špajza
+  ctx.fillRect(970, 545, 15, 20);    // 3 -> Lijevi hodnik
+  ctx.fillRect(1160, 405, 55, 50);   // 7 Toaleti
+  ctx.fillRect(1145, 422, 15, 20);   // 7 -> Sala
+  ctx.fillRect(1175, 455, 25, 13);   // 7 -> 6 prolaz
+  ctx.fillRect(1160, 468, 55, 50);   // 6 Kuhinja
+  ctx.fillRect(1145, 478, 15, 20);   // 6 -> Desni hodnik
+  ctx.fillRect(985, 475, 45, 125);   // Lijevi hodnik (2A i 2B)
+  ctx.fillRect(985, 600, 47, 30);    // Lijevi hodnik zavoj u ured
+  ctx.fillRect(1100, 475, 45, 125);  // Desni hodnik (4A i 4B)
+  ctx.fillRect(1098, 600, 47, 30);   // Desni hodnik zavoj u ured
+  ctx.fillRect(1032, 605, 66, 40);   // Ured (YOU)
+
+  // 3. ARHITEKTONSKE BLUEPRINT LINIJE (Čiste svijetlosive/svijetloplave linije bez prekida)
+  ctx.strokeStyle = '#d4e4f4';
   ctx.lineWidth = 2.5;
-  ctx.fillStyle = 'rgba(16, 50, 30, 0.55)';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'miter';
 
-  // Prolaz 1A (Bina) -> 1B (Sala)
-  ctx.fillRect(1028, 396, 34, 18);
   ctx.beginPath();
-  ctx.moveTo(1028, 396); ctx.lineTo(1028, 414);
-  ctx.moveTo(1062, 396); ctx.lineTo(1062, 414);
+
+  // --- SHOW STAGE (CAM 1A) ---
+  ctx.moveTo(1045, 398);
+  ctx.lineTo(1025, 398);
+  ctx.lineTo(1025, 350);
+  ctx.lineTo(1105, 350);
+  ctx.lineTo(1105, 398);
+  ctx.lineTo(1085, 398);
+  // Prolaz 1A -> 1B
+  ctx.moveTo(1045, 398); ctx.lineTo(1045, 415);
+  ctx.moveTo(1085, 398); ctx.lineTo(1085, 415);
+
+  // --- SALA (CAM 1B) GORNJI ZIDOVI ---
+  ctx.moveTo(1045, 415); ctx.lineTo(985, 415);
+  ctx.moveTo(1085, 415); ctx.lineTo(1145, 415);
+
+  // --- BACKSTAGE (CAM 5) ---
+  ctx.moveTo(985, 415);
+  ctx.lineTo(985, 422);
+  ctx.lineTo(970, 422);
+  ctx.lineTo(970, 405);
+  ctx.lineTo(915, 405);
+  ctx.lineTo(915, 455);
+  ctx.lineTo(970, 455);
+  ctx.lineTo(970, 442);
+  ctx.lineTo(985, 442);
+
+  // Zid sale između Backstagea i Covea
+  ctx.moveTo(985, 442); ctx.lineTo(985, 478);
+
+  // --- PIRATE COVE (CAM 1C) ---
+  ctx.moveTo(985, 478);
+  ctx.lineTo(970, 478);
+  ctx.lineTo(970, 468);
+  ctx.lineTo(915, 468);
+  ctx.lineTo(915, 518);
+  ctx.lineTo(970, 518);
+  ctx.lineTo(970, 498);
+  ctx.lineTo(985, 498);
+
+  // Zid lijevog hodnika između Covea i Špajze
+  ctx.moveTo(985, 498); ctx.lineTo(985, 545);
+
+  // --- ŠPAJZA (CAM 3) ---
+  ctx.moveTo(985, 545);
+  ctx.lineTo(970, 545);
+  ctx.lineTo(970, 535);
+  ctx.lineTo(915, 535);
+  ctx.lineTo(915, 585);
+  ctx.lineTo(970, 585);
+  ctx.lineTo(970, 565);
+  ctx.lineTo(985, 565);
+
+  // Vanjski zid lijevog hodnika do ureda
+  ctx.moveTo(985, 565);
+  ctx.lineTo(985, 630);
+  ctx.lineTo(1032, 630);
+
+  // Unutrašnji zid lijevog hodnika (prema centralnom dvorištu)
+  ctx.moveTo(1030, 475);
+  ctx.lineTo(1030, 605);
+  ctx.lineTo(1032, 605);
+
+  // Donji zid sale između hodnika
+  ctx.moveTo(1030, 475); ctx.lineTo(1100, 475);
+
+  // --- TOALETI (CAM 7) ---
+  ctx.moveTo(1145, 415);
+  ctx.lineTo(1145, 422);
+  ctx.lineTo(1160, 422);
+  ctx.lineTo(1160, 405);
+  ctx.lineTo(1215, 405);
+  ctx.lineTo(1215, 455);
+  ctx.lineTo(1200, 455);
+
+  ctx.moveTo(1145, 442);
+  ctx.lineTo(1160, 442);
+  ctx.lineTo(1160, 455);
+  ctx.lineTo(1175, 455);
+
+  // Vratni prolaz 7 -> 6 (Kuhinja)
+  ctx.moveTo(1175, 455); ctx.lineTo(1175, 468);
+  ctx.moveTo(1200, 455); ctx.lineTo(1200, 468);
+
+  // Zid sale između Toaleta i Kuhinje
+  ctx.moveTo(1145, 442); ctx.lineTo(1145, 478);
+
+  // --- KUHINJA (CAM 6) ---
+  ctx.moveTo(1200, 468);
+  ctx.lineTo(1215, 468);
+  ctx.lineTo(1215, 518);
+  ctx.lineTo(1160, 518);
+  ctx.lineTo(1160, 498);
+  ctx.lineTo(1145, 498);
+
+  ctx.moveTo(1175, 468);
+  ctx.lineTo(1160, 468);
+  ctx.lineTo(1160, 478);
+  ctx.lineTo(1145, 478);
+
+  // Vanjski zid desnog hodnika do ureda
+  ctx.moveTo(1145, 498);
+  ctx.lineTo(1145, 630);
+  ctx.lineTo(1098, 630);
+
+  // Unutrašnji zid desnog hodnika
+  ctx.moveTo(1100, 475);
+  ctx.lineTo(1100, 605);
+  ctx.lineTo(1098, 605);
+
+  // --- URED (OFFICE / YOU) GORNJI I DONJI ZID ---
+  ctx.moveTo(1032, 605); ctx.lineTo(1098, 605);
+  ctx.moveTo(1032, 645); ctx.lineTo(1098, 645);
+  ctx.moveTo(1032, 630); ctx.lineTo(1032, 645);
+  ctx.moveTo(1098, 630); ctx.lineTo(1098, 645);
+
   ctx.stroke();
 
-  // Prolaz 1B (Sala) <-> 5 (Backstage)
-  ctx.fillRect(974, 408, 14, 24);
-  ctx.beginPath();
-  ctx.moveTo(974, 408); ctx.lineTo(988, 408);
-  ctx.moveTo(974, 432); ctx.lineTo(988, 432);
-  ctx.stroke();
-
-  // Prolaz 1B (Sala) <-> 1C (Pirate Cove)
-  ctx.fillRect(974, 466, 14, 20);
-  ctx.beginPath();
-  ctx.moveTo(974, 466); ctx.lineTo(988, 466);
-  ctx.moveTo(974, 486); ctx.lineTo(988, 486);
-  ctx.stroke();
-
-  // Prolaz 1B (Sala) <-> 7 (Toaleti)
-  ctx.fillRect(1102, 418, 42, 22);
-  ctx.beginPath();
-  ctx.moveTo(1102, 418); ctx.lineTo(1144, 418);
-  ctx.moveTo(1102, 440); ctx.lineTo(1144, 440);
-  ctx.stroke();
-
-  // Prolaz 7 (Toaleti) <-> 6 (Kuhinja)
-  ctx.fillRect(1160, 452, 30, 18);
-  ctx.beginPath();
-  ctx.moveTo(1160, 452); ctx.lineTo(1160, 470);
-  ctx.moveTo(1190, 452); ctx.lineTo(1190, 470);
-  ctx.stroke();
-
-  // Spoj 6 (Kuhinja) <-> 4A (Desni hodnik)
-  ctx.fillRect(1114, 484, 30, 20);
-  ctx.beginPath();
-  ctx.moveTo(1114, 484); ctx.lineTo(1144, 484);
-  ctx.moveTo(1114, 504); ctx.lineTo(1144, 504);
-  ctx.stroke();
-
-  // LIJEVI HODNIK (West Hall - 2A & 2B)
-  // 1B -> 2A
-  ctx.fillRect(984, 468, 46, 20);
-  ctx.beginPath();
-  ctx.moveTo(984, 468); ctx.lineTo(984, 488);
-  ctx.moveTo(1030, 468); ctx.lineTo(1030, 488);
-  ctx.stroke();
-
-  // Spoj 2A <-> 3 (Špajza)
-  ctx.fillRect(974, 544, 10, 22);
-  ctx.beginPath();
-  ctx.moveTo(974, 544); ctx.lineTo(984, 544);
-  ctx.moveTo(974, 566); ctx.lineTo(984, 566);
-  ctx.stroke();
-
-  // Prolaz 2A -> 2B (kontinuirani hodnik)
-  ctx.fillRect(984, 536, 46, 16);
-  ctx.beginPath();
-  ctx.moveTo(984, 536); ctx.lineTo(984, 552);
-  ctx.moveTo(1030, 536); ctx.lineTo(1030, 552);
-  ctx.stroke();
-
-  // Spoj 2B -> URED (Lijeva vrata sa skretanjem)
-  ctx.fillRect(1004, 598, 20, 18);
-  ctx.beginPath();
-  ctx.moveTo(984, 598); ctx.lineTo(984, 616); ctx.lineTo(1022, 616);
-  ctx.moveTo(1030, 584); ctx.lineTo(1030, 602); ctx.lineTo(1022, 602);
-  ctx.stroke();
-
-  // DESNI HODNIK (East Hall - 4A & 4B)
-  // 1B -> 4A
-  ctx.fillRect(1068, 468, 46, 20);
-  ctx.beginPath();
-  ctx.moveTo(1068, 468); ctx.lineTo(1068, 488);
-  ctx.moveTo(1114, 468); ctx.lineTo(1114, 488);
-  ctx.stroke();
-
-  // Prolaz 4A -> 4B (kontinuirani hodnik)
-  ctx.fillRect(1068, 536, 46, 16);
-  ctx.beginPath();
-  ctx.moveTo(1068, 536); ctx.lineTo(1068, 552);
-  ctx.moveTo(1114, 536); ctx.lineTo(1114, 552);
-  ctx.stroke();
-
-  // Spoj 4B -> URED (Desna vrata sa skretanjem)
-  ctx.fillRect(1068, 598, 20, 18);
-  ctx.beginPath();
-  ctx.moveTo(1114, 598); ctx.lineTo(1114, 616); ctx.lineTo(1076, 616);
-  ctx.moveTo(1068, 584); ctx.lineTo(1068, 602); ctx.lineTo(1076, 602);
-  ctx.stroke();
-
-  // 3. SOBE (Blueprint zidovi s jasnim nazivima)
-  const rooms = [
-    { id: '1A', name: 'BINA',       x: 1005, y: 355, w: 80,  h: 42 },
-    { id: '1B', name: 'SALA',       x: 986,  y: 412, w: 118, h: 56 },
-    { id: '5',  name: 'BACKSTAGE',  x: 916,  y: 394, w: 58,  h: 48 },
-    { id: '1C', name: 'COVE',       x: 924,  y: 456, w: 58,  h: 44 },
-    { id: '7',  name: 'TOALETI',    x: 1144, y: 404, w: 62,  h: 48 },
-    { id: '6',  name: 'KUHINJA',    x: 1144, y: 470, w: 62,  h: 48 },
-    { id: '3',  name: 'ŠPAJZA',     x: 916,  y: 532, w: 58,  h: 44 },
-    { id: '2A', name: 'LIJEVI',     x: 984,  y: 486, w: 46,  h: 52 },
-    { id: '2B', name: 'KUT LIJEVO', x: 984,  y: 550, w: 46,  h: 48 },
-    { id: '4A', name: 'DESNI',      x: 1068, y: 486, w: 46,  h: 52 },
-    { id: '4B', name: 'KUT DESNO',  x: 1068, y: 550, w: 46,  h: 48 }
-  ];
-
-  rooms.forEach(r => {
-    ctx.fillStyle = 'rgba(10, 32, 20, 0.65)';
-    ctx.fillRect(r.x, r.y, r.w, r.h);
-
-    ctx.strokeStyle = '#2ee860';
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(r.x, r.y, r.w, r.h);
-
-    ctx.fillStyle = 'rgba(130, 255, 160, 0.8)';
-    ctx.font = 'bold 8px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText(r.name, r.x + r.w / 2, r.y + 9);
-  });
-
-  // 4. URED (YOU / VI) - Centralna pozicija igrača s otvorima za vrata
-  const uX = 1022, uY = 602, uW = 54, uH = 42;
-  ctx.fillStyle = '#143820';
-  ctx.fillRect(uX, uY, uW, uH);
-
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  // Gornji i donji zid
-  ctx.moveTo(uX, uY); ctx.lineTo(uX + uW, uY);
-  ctx.moveTo(uX, uY + uH); ctx.lineTo(uX + uW, uY + uH);
-  // Lijevi zid s otvorom za vrata
-  ctx.moveTo(uX, uY); ctx.lineTo(uX, uY + 6);
-  ctx.moveTo(uX, uY + 28); ctx.lineTo(uX, uY + uH);
-  // Desni zid s otvorom za vrata
-  ctx.moveTo(uX + uW, uY); ctx.lineTo(uX + uW, uY + 6);
-  ctx.moveTo(uX + uW, uY + 28); ctx.lineTo(uX + uW, uY + uH);
-  ctx.stroke();
-
-  // Status roletni ureda na tlocrtu (crvena blokada ako su spuštene!)
+  // 4. VRATA UREDA (Ako su zatvorena, svijetli neonska crvena sigurnosna barijera!)
   if (state.leftDoorClosed) {
-    ctx.strokeStyle = '#ff2222';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath(); ctx.moveTo(uX, uY + 7); ctx.lineTo(uX, uY + 27); ctx.stroke();
+    ctx.strokeStyle = '#ff2233';
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#ff2233';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(1032, 605); ctx.lineTo(1032, 630);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
   }
   if (state.rightDoorClosed) {
-    ctx.strokeStyle = '#ff2222';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath(); ctx.moveTo(uX + uW, uY + 7); ctx.lineTo(uX + uW, uY + 27); ctx.stroke();
+    ctx.strokeStyle = '#ff2233';
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#ff2233';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(1098, 605); ctx.lineTo(1098, 630);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
   }
 
-  // Pulsirajući indikator "VI / YOU"
+  // 5. OZNAKA "YOU" U UREDU (FNaF 1 autentični radar marker)
   const pulse = (Math.sin(Date.now() * 0.007) + 1) * 0.5;
-  ctx.fillStyle = `rgba(50, 255, 90, ${0.4 + pulse * 0.5})`;
+  ctx.fillStyle = `rgba(50, 255, 90, ${0.5 + pulse * 0.5})`;
+  ctx.shadowColor = '#32ff5a';
+  ctx.shadowBlur = 6;
   ctx.beginPath();
-  ctx.arc(uX + uW / 2, uY + 18, 4 + pulse * 2.5, 0, Math.PI * 2);
+  ctx.arc(1065, 620, 3.5 + pulse * 1.5, 0, Math.PI * 2);
   ctx.fill();
+  ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 9px Courier New';
+  ctx.font = 'bold 10px "Courier New", Courier, monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('URED', uX + uW / 2, uY + 34);
+  ctx.fillText('YOU', 1065, 637);
 
-  // 5. RADARSKI SCANLINE
-  state.radarScanY = ((state.radarScanY || 0) + 0.6) % mapH;
-  const scanGrad = ctx.createLinearGradient(mapX, mapY + state.radarScanY, mapX, mapY + state.radarScanY + 16);
-  scanGrad.addColorStop(0, 'rgba(51, 255, 85, 0.16)');
-  scanGrad.addColorStop(1, 'transparent');
-  ctx.fillStyle = scanGrad;
-  ctx.fillRect(mapX, mapY + state.radarScanY, mapW, 16);
-
-  // 6. DUGMAD KAMERA (Interaktivni gumbi s jasnim statusom)
+  // 6. DUGMAD KAMERA (Čisti hardverski FNaF gumbi bez natrpanih naziva soba)
   Object.values(CAMERAS).forEach(cam => {
     const isSelected = state.currentCam === cam.id;
-    const bW = 44;
-    const bH = 22;
+    const bW = 40;
+    const bH = 20;
     const bx = cam.x - bW / 2;
-    const by = cam.y - bH / 2 + 5;
+    const by = cam.y - bH / 2;
 
     if (isSelected) {
-      ctx.fillStyle = '#33ff55';
+      ctx.fillStyle = '#2ee855';
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#33ff55';
-      ctx.shadowBlur = 8;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#2ee855';
+      ctx.shadowBlur = 10;
     } else {
-      ctx.fillStyle = '#102218';
-      ctx.strokeStyle = '#28a846';
+      ctx.fillStyle = '#141923';
+      ctx.strokeStyle = '#506478';
       ctx.lineWidth = 1.5;
       ctx.shadowBlur = 0;
     }
@@ -2828,10 +2847,10 @@ function drawCCTVMap() {
     ctx.strokeRect(bx, by, bW, bH);
     ctx.shadowBlur = 0;
 
-    ctx.fillStyle = isSelected ? '#000000' : '#ffffff';
-    ctx.font = 'bold 10px Courier New';
+    ctx.fillStyle = isSelected ? '#000000' : '#d4e0ee';
+    ctx.font = 'bold 10px "Courier New", Courier, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(`CAM ${cam.id}`, cam.x, by + 15);
+    ctx.fillText(`CAM ${cam.id}`, cam.x, by + 14);
   });
 
   ctx.restore();
@@ -3685,7 +3704,7 @@ canvas.addEventListener('mousemove', e => {
       if (pos.x >= 59 && pos.x <= 421 && pos.y >= 599 && pos.y <= 637) isClickable = true;
       if (state.currentCam === '2B' && pos.x >= 170 && pos.x <= 285 && pos.y >= 180 && pos.y <= 325) isClickable = true;
       for (const cam of Object.values(CAMERAS)) {
-        if (pos.x >= cam.x - 24 && pos.x <= cam.x + 24 && pos.y >= cam.y - 12 && pos.y <= cam.y + 18) {
+        if (pos.x >= cam.x - 22 && pos.x <= cam.x + 22 && pos.y >= cam.y - 12 && pos.y <= cam.y + 12) {
           isClickable = true;
           break;
         }
@@ -3763,7 +3782,7 @@ canvas.addEventListener('mousedown', e => {
 
     // Provjeri klik na kamere na tlocrtu
     for (const cam of Object.values(CAMERAS)) {
-      if (pos.x >= cam.x - 24 && pos.x <= cam.x + 24 && pos.y >= cam.y - 12 && pos.y <= cam.y + 18) {
+      if (pos.x >= cam.x - 22 && pos.x <= cam.x + 22 && pos.y >= cam.y - 12 && pos.y <= cam.y + 12) {
         state.currentCam = cam.id;
         state.camStaticTimer = 0.16;
         state.windingTape = false;
