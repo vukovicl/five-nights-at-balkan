@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Five Nights at Balkan: Streamer Edition</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="game-wrapper">
+  <canvas id="gameCanvas" width="1280" height="720"></canvas>
+  <div class="crt-overlay"></div>
+
+  <!-- GLAVNI MENI -->
+  <div id="menu-screen" class="overlay-screen">
+    <div class="menu-header">
+      <div class="game-title">Five Nights at Balkan</div>
+      <div class="game-subtitle">Streamer Edition // Kafana &amp; Studio CCTV</div>
+    </div>
+
+    <div class="menu-layout">
+      <div class="menu-buttons">
+        <div style="font-size:12px; color:#aaa; margin-bottom:2px;">ODABERI NOĆ SMJENE:</div>
+        <div class="night-selector" id="night-pills">
+          <div class="night-pill active" data-night="1">NOĆ 1</div>
+          <div class="night-pill" data-night="2">NOĆ 2</div>
+          <div class="night-pill" data-night="3">NOĆ 3</div>
+          <div class="night-pill" data-night="4">NOĆ 4</div>
+          <div class="night-pill" data-night="5">NOĆ 5</div>
+        </div>
+
+        <button class="btn btn-accent" id="btn-start-night">▶ POKRENI SMJENU (NOĆ 1)</button>
+        <button class="btn" id="btn-custom-creator">🎭 CUSTOM STREAMER CREATOR (SLIKE/IMENA)</button>
+        <button class="btn" id="btn-custom-night">⚙️ CUSTOM NIGHT (AI TEŽINA 0-20)</button>
+        <button class="btn" id="btn-speed-toggle">⏱️ TRAJANJE SATA: 60s (REALNO)</button>
+      </div>
+
+      <div class="controls-card">
+        <h3>📋 UPUTE ZA NOĆNOG MODERATORA</h3>
+        <p>• <b>MIŠ LIJEVO/DESNO</b>: Panoramski pogled po uredu</p>
+        <p>• <span class="key-badge">SPACE</span>: Podigni / spusti CCTV monitor</p>
+        <p>• <span class="key-badge">A</span> / <span class="key-badge">D</span>: Lijeva / Desna metalna roletna (vrata)</p>
+        <p>• <span class="key-badge">Z</span> / <span class="key-badge">C</span>: Lijevo / Desno hodničko svjetlo</p>
+        <p>• <span class="key-badge">1</span> - <span class="key-badge">6</span>: Brzo prebacivanje glavnih kamera (ili klik na tlocrt)</p>
+        <p>• <b>CAM 1C (Green Screen)</b>: Provjeravaj Omču iza zavjese! Ako krene sprintati kroz lijevi hodnik (<span class="key-badge">CAM 2A</span>), imaš 2 sekunde da spustiš lijevu roletnu!</p>
+        <p>• <b>CAM 5 (Backstage Kazetofon)</b>: Drži gumb <i>"PREMATAJ TRAKU / BACAJ DONACIJU"</i> da se ne probudi peti skriveni lik!</p>
+        <p>• <b>Easter Egg</b>: Klikni na nos streamera na posteru u uredu!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CUSTOM CREATOR -->
+  <div id="creator-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 style="color:var(--crt-amber);">🎭 CUSTOM STREAMER CREATOR</h2>
+        <div style="display:flex; gap:10px;">
+          <button class="btn" id="btn-reset-chars" style="padding:6px 12px; font-size:12px;">VRATI PREDEFINIRANE</button>
+          <button class="btn btn-accent" id="btn-close-creator" style="padding:6px 14px; font-size:12px;">SPREMI I ZATVORI</button>
+        </div>
+      </div>
+      <p style="font-size:12.5px; color:#bbb; margin-bottom:14px;">
+        Igraj s predefiniranim balkanskim vektorskim karikaturama ili učitaj vlastite slike lica (PNG/JPG), promijeni imena i upiši vlastiti jumpscare krik za svakog lika!
+      </p>
+      <div class="char-grid" id="creator-grid"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: CUSTOM NIGHT (AI SLIDERI 0-20) -->
+  <div id="custom-night-modal" class="modal-backdrop hidden">
+    <div class="modal-box" style="max-width:760px;">
+      <div class="modal-header">
+        <h2 style="color:var(--crt-amber);">⚙️ CUSTOM NIGHT - PODESI AI TEŽINU (0 - 20)</h2>
+        <button class="btn" id="btn-close-cn" style="padding:6px 12px; font-size:12px;">NAZAD</button>
+      </div>
+      <div class="char-grid" id="cn-grid" style="margin-bottom:18px;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <button class="btn btn-danger" id="btn-20202020">🔥 20/20/20/20 BALKAN KAOS MOD</button>
+        <button class="btn btn-accent" id="btn-start-cn">▶ POKRENI CUSTOM NIGHT (NOĆ 6)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD TIJEKOM IGRE -->
+  <div id="hud-layer" class="hidden">
+    <!-- Telefon Gazde -->
+    <div id="phone-box" class="hidden">
+      <div class="phone-header">
+        <span>☎️ DOLAZNI POZIV: GAZDA MILE</span>
+        <button class="mute-btn" id="btn-mute-call">MUTE CALL</button>
+      </div>
+      <div class="phone-body" id="phone-text"></div>
+    </div>
+
+    <!-- Sat i Noć -->
+    <div class="hud-top-right">
+      <div class="clock-text" id="hud-clock">12:00 AM</div>
+      <div class="night-text" id="hud-night">NOĆ 1</div>
+    </div>
+
+    <!-- Upozorenje za kazetofon -->
+    <div id="tape-warning" class="hidden">⚠️ DONACIJSKA TRAKA PRI KRAJU (CAM 5)!</div>
+
+    <!-- Potrošnja agregata -->
+    <div class="hud-bottom-left">
+      <div class="power-line">AGREGAT: <span id="hud-power">100%</span></div>
+      <div class="usage-row">
+        <span>POTROŠNJA:</span>
+        <div class="usage-bars" id="hud-usage-bars">
+          <div class="u-bar"></div>
+          <div class="u-bar"></div>
+          <div class="u-bar"></div>
+          <div class="u-bar"></div>
+          <div class="u-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gumb za CCTV Monitor -->
+    <div id="cam-toggle-bar">[ SPACE ] CCTV MONITOR</div>
+  </div>
+</div>
+
+  <script src="script.js"></script>
+</body>
+</html>

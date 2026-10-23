@@ -1,0 +1,454 @@
+  :root {
+    --crt-green: #33ff55;
+    --crt-amber: #ffaa00;
+    --danger: #ff2222;
+    --bg-dark: #070709;
+    --panel-bg: rgba(14, 15, 20, 0.92);
+  }
+
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    color: #eee;
+    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #game-wrapper {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    max-width: 177.78vh; /* 16:9 omjer */
+    max-height: 56.25vw;
+    background: #000;
+    overflow: hidden;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+    border: 2px solid #1a1a1a;
+  }
+
+  canvas#gameCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+  }
+
+  /* CRT Scanline & Vignette Overlay */
+  .crt-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+      radial-gradient(circle at center, transparent 58%, rgba(0, 0, 0, 0.78) 100%);
+    background-size: 100% 4px, 100% 100%;
+    z-index: 30;
+  }
+
+  /* EKRANI (Meni, Customizer, Custom Night, Victory, Game Over) */
+  .overlay-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 28px 36px;
+    background: radial-gradient(circle at 75% 50%, rgba(30, 15, 15, 0.45), rgba(4, 4, 6, 0.96) 70%);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* GLAVNI MENI */
+  .menu-header {
+    max-width: 620px;
+  }
+
+  .game-title {
+    font-size: clamp(26px, 3.3vw, 46px);
+    font-weight: 900;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 3px 3px 0 #990000, 0 0 18px rgba(255, 40, 40, 0.7);
+    line-height: 1.05;
+  }
+
+  .game-subtitle {
+    font-size: clamp(13px, 1.4vw, 19px);
+    color: var(--crt-amber);
+    margin-top: 6px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .menu-layout {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+    flex: 1;
+    margin-top: 15px;
+    gap: 24px;
+  }
+
+  .menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 350px;
+  }
+
+  .btn {
+    background: rgba(20, 22, 28, 0.9);
+    color: #fff;
+    border: 2px solid #555;
+    padding: 11px 16px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+  }
+
+  .btn:hover:not(:disabled) {
+    border-color: var(--crt-amber);
+    color: var(--crt-amber);
+    transform: translateX(8px);
+    background: rgba(45, 25, 15, 0.92);
+    box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-danger {
+    border-color: #aa2222;
+    color: #ff7777;
+  }
+
+  .btn-accent {
+    border-color: var(--crt-green);
+    color: var(--crt-green);
+  }
+
+  .night-selector {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .night-pill {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    background: #14161d;
+    border: 1px solid #444;
+    color: #aaa;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+  }
+
+  .night-pill.active {
+    background: #771111;
+    color: #fff;
+    border-color: #ff4444;
+    box-shadow: 0 0 10px rgba(255, 30, 30, 0.5);
+  }
+
+  .controls-card {
+    background: rgba(10, 12, 16, 0.88);
+    border: 1px solid #3a3a44;
+    padding: 14px 18px;
+    max-width: 440px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #ccc;
+  }
+
+  .controls-card h3 {
+    color: var(--crt-amber);
+    margin-bottom: 6px;
+    font-size: 14px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+  }
+
+  .key-badge {
+    display: inline-block;
+    background: #252830;
+    border: 1px solid #666;
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 11px;
+  }
+
+  /* MODAL ZA CUSTOMIZACIJU LIKOVA I CUSTOM NIGHT */
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 40;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .modal-box {
+    background: #101218;
+    border: 2px solid var(--crt-amber);
+    width: 100%;
+    max-width: 960px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 22px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.95);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+
+  .char-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+
+  .char-card {
+    background: #181b24;
+    border: 1px solid #383e4c;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .char-card h4 {
+    color: var(--crt-amber);
+    font-size: 14px;
+  }
+
+  .char-role {
+    font-size: 11px;
+    color: #999;
+    min-height: 28px;
+  }
+
+  .char-preview {
+    width: 72px;
+    height: 72px;
+    border: 2px solid #555;
+    margin: 0 auto;
+    background: #090a0f;
+    object-fit: cover;
+    display: block;
+  }
+
+  .char-card label {
+    font-size: 11px;
+    color: #bbb;
+    display: block;
+  }
+
+  .char-card input[type="text"],
+  .char-card input[type="range"] {
+    width: 100%;
+    background: #0c0e12;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 5px 7px;
+    font-family: inherit;
+    font-size: 12px;
+  }
+
+  .char-card input[type="file"] {
+    font-size: 10.5px;
+    color: #aaa;
+    width: 100%;
+  }
+
+  /* HUD TIJEKOM IGRE */
+  #hud-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 15;
+  }
+
+  .hud-top-right {
+    position: absolute;
+    top: 18px;
+    right: 24px;
+    text-align: right;
+    text-shadow: 2px 2px 0 #000;
+  }
+
+  .clock-text {
+    font-size: clamp(24px, 3vw, 40px);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 2px;
+  }
+
+  .night-text {
+    font-size: clamp(14px, 1.5vw, 20px);
+    color: #ccc;
+    margin-top: 2px;
+  }
+
+  .hud-bottom-left {
+    position: absolute;
+    bottom: 20px;
+    left: 24px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid #333;
+    padding: 10px 14px;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  .power-line {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  .usage-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+  }
+
+  .usage-bars {
+    display: flex;
+    gap: 4px;
+  }
+
+  .u-bar {
+    width: 14px;
+    height: 18px;
+    border: 1px solid #444;
+    background: #1a1a1a;
+  }
+
+  /* TELEFONSKI POZIV GAZDE */
+  #phone-box {
+    position: absolute;
+    top: 18px;
+    left: 24px;
+    max-width: 480px;
+    background: rgba(10, 18, 12, 0.92);
+    border: 2px solid var(--crt-green);
+    padding: 12px 15px;
+    pointer-events: auto;
+    box-shadow: 0 0 20px rgba(0, 255, 80, 0.25);
+  }
+
+  .phone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    color: var(--crt-green);
+    font-weight: bold;
+    font-size: 13px;
+  }
+
+  .phone-body {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #dfd;
+  }
+
+  .mute-btn {
+    background: #16301b;
+    color: var(--crt-green);
+    border: 1px solid var(--crt-green);
+    padding: 3px 9px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .mute-btn:hover {
+    background: var(--crt-green);
+    color: #000;
+  }
+
+  /* DONJA TRAKA ZA MONITOR */
+  #cam-toggle-bar {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 380px;
+    max-width: 48vw;
+    height: 38px;
+    background: rgba(30, 34, 42, 0.85);
+    border: 2px solid #888;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.15s;
+  }
+
+  #cam-toggle-bar:hover {
+    background: rgba(70, 80, 95, 0.95);
+    border-color: #fff;
+  }
+
+  /* UPOZORENJE ZA KAZETOFON */
+  #tape-warning {
+    position: absolute;
+    top: 88px;
+    right: 24px;
+    color: #ff3333;
+    font-weight: bold;
+    font-size: 14px;
+    background: rgba(40, 0, 0, 0.85);
+    border: 1px solid #ff3333;
+    padding: 6px 10px;
+    animation: blinkWarn 0.55s infinite alternate;
+  }
+
+  @keyframes blinkWarn {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0.25; transform: scale(0.97); }
+  }
