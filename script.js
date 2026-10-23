@@ -830,12 +830,6 @@ document.getElementById('btn-mute-call').addEventListener('click', () => {
   document.getElementById('phone-box').classList.add('hidden');
 });
 
-const btnFoxyTest = document.getElementById('btn-foxy-test');
-if (btnFoxyTest) {
-  btnFoxyTest.addEventListener('click', () => {
-    triggerFoxySprintTest();
-  });
-}
 
 document.getElementById('cam-toggle-bar').addEventListener('click', () => {
   toggleCameraMonitor();
@@ -1394,14 +1388,82 @@ function renderOffice() {
   const W = state.officeWidth; // 1800
   const H = canvas.height;     // 720
 
-  // Pozadina zidova i poda ureda
+  // 3D POZADINA UREDA: ZIDOVI, STROP I KARIRANI POD U PERSPEKTIVI
+  // 1. Zidovi ureda
   const wallGrad = ctx.createLinearGradient(0, 0, 0, H);
-  wallGrad.addColorStop(0, '#14151c');
-  wallGrad.addColorStop(0.72, '#1f2029');
-  wallGrad.addColorStop(0.73, '#101014');
-  wallGrad.addColorStop(1, '#08080b');
+  wallGrad.addColorStop(0, '#111218');
+  wallGrad.addColorStop(0.65, '#1a1b24');
+  wallGrad.addColorStop(0.68, '#14151e');
+  wallGrad.addColorStop(1, '#090a0d');
   ctx.fillStyle = wallGrad;
   ctx.fillRect(0, 0, W, H);
+
+  // 2. Strop sa 3D panelima i visećom neonskom lampom (y: 0..100)
+  ctx.strokeStyle = '#0d0e13';
+  ctx.lineWidth = 2;
+  for (let cx = 0; cx < W; cx += 120) {
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx + (cx - 900) * 0.08, 100);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(0, 100); ctx.lineTo(W, 100);
+  ctx.stroke();
+
+  // Viseća industrijska neonska svjetiljka u sredini stropa
+  ctx.fillStyle = '#22252a';
+  ctx.fillRect(780, 26, 240, 18);
+  ctx.strokeStyle = '#3d434d';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(780, 26, 240, 18);
+  // Cijevi neona
+  const neonHum = state.powerOut ? '#0a0a0c' : '#eaf8ff';
+  ctx.fillStyle = neonHum;
+  ctx.fillRect(790, 32, 220, 6);
+  if (!state.powerOut) {
+    // Diskretno fluorescentno osvjetljenje prema dolje
+    const tubeGlow = ctx.createRadialGradient(900, 35, 10, 900, 35, 240);
+    tubeGlow.addColorStop(0, 'rgba(210, 235, 255, 0.14)');
+    tubeGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = tubeGlow;
+    ctx.fillRect(660, 35, 480, 220);
+  }
+
+  // 3. Karirani industrijski pod ureda u 3D perspektivi (y: 480..720)
+  const floorY0 = 480;
+  const numFloorRows = 6;
+  const numFloorCols = 30;
+  for (let fr = 0; fr < numFloorRows; fr++) {
+    const t0 = Math.pow(fr / numFloorRows, 1.35);
+    const t1 = Math.pow((fr + 1) / numFloorRows, 1.35);
+    const fy0 = floorY0 + (H - floorY0) * t0;
+    const fy1 = floorY0 + (H - floorY0) * t1;
+
+    for (let fc = 0; fc < numFloorCols; fc++) {
+      const u0 = fc / numFloorCols;
+      const u1 = (fc + 1) / numFloorCols;
+
+      const isAlt = (fc + fr) % 2 === 0;
+      ctx.fillStyle = isAlt ? '#16171d' : '#0d0e12';
+
+      ctx.beginPath();
+      ctx.moveTo(u0 * W, fy0);
+      ctx.lineTo(u1 * W, fy0);
+      ctx.lineTo(u1 * W, fy1);
+      ctx.lineTo(u0 * W, fy1);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#08080a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  // Masivna lajsna na spoju zida i poda
+  ctx.fillStyle = '#221510';
+  ctx.fillRect(0, floorY0 - 4, W, 8);
 
   // Tapete / crveno-crna traka po sredini zida (FNaF stil + balkanski štih)
   ctx.fillStyle = '#4a1212';
@@ -1464,14 +1526,81 @@ function renderOffice() {
   ctx.stroke();
 
   // --------------------------------------------------------------------------
-  // RADNI STOL S CRT MONITOROM, VENTILATOROM, HEKLANIM MILJEOM I TURSKOM KAVOM
+  // RADNI STOL U 3D PERSPEKTIVI S CRT MONITOROM, VENTILATOROM, MILJEOM I KAVOM
   // --------------------------------------------------------------------------
-  // Ploča stola
-  ctx.fillStyle = '#2d1c10';
-  ctx.strokeStyle = '#180e07';
-  ctx.lineWidth = 4;
-  ctx.fillRect(510, 470, 780, 250);
-  ctx.strokeRect(510, 470, 780, 250);
+  // 1. Sjena stola na podu ureda
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+  ctx.beginPath();
+  ctx.ellipse(900, 695, 440, 25, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Prednja okomita fronta / ladice stola (apron & drawers: y 585..720)
+  ctx.fillStyle = '#1c110a';
+  ctx.fillRect(495, 585, 810, 135);
+  ctx.strokeStyle = '#100905';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(495, 585, 810, 135);
+
+  // Lijevi ormarić s ladicama (x: 510..680)
+  ctx.fillStyle = '#25160e';
+  ctx.fillRect(510, 595, 170, 120);
+  for (let d = 0; d < 3; d++) {
+    ctx.strokeStyle = '#120b06';
+    ctx.strokeRect(515, 600 + d * 38, 160, 32);
+    // Mesingana ručkica ladice
+    ctx.fillStyle = '#c99e28';
+    ctx.fillRect(580, 613 + d * 38, 30, 6);
+  }
+
+  // Desni ormarić s ladicama (x: 1120..1290)
+  ctx.fillStyle = '#25160e';
+  ctx.fillRect(1120, 595, 170, 120);
+  for (let d = 0; d < 3; d++) {
+    ctx.strokeStyle = '#120b06';
+    ctx.strokeRect(1125, 600 + d * 38, 160, 32);
+    // Mesingana ručkica ladice
+    ctx.fillStyle = '#c99e28';
+    ctx.fillRect(1190, 613 + d * 38, 30, 6);
+  }
+
+  // Srednji prostor za noge (kneehole) u dubokoj sjeni
+  ctx.fillStyle = '#080503';
+  ctx.fillRect(690, 595, 420, 125);
+
+  // 3. Gornja ploha radnog stola u 3D perspektivi (trapezoid: y 470..585)
+  const deskTopPoly = new Path2D();
+  deskTopPoly.moveTo(535, 470);
+  deskTopPoly.lineTo(1265, 470);
+  deskTopPoly.lineTo(1310, 585);
+  deskTopPoly.lineTo(490, 585);
+  deskTopPoly.closePath();
+
+  ctx.save();
+  ctx.clip(deskTopPoly);
+
+  const deskGrad = ctx.createLinearGradient(0, 470, 0, 585);
+  deskGrad.addColorStop(0, '#23140b');
+  deskGrad.addColorStop(0.6, '#382012');
+  deskGrad.addColorStop(1, '#492b19');
+  ctx.fillStyle = deskGrad;
+  ctx.fillRect(480, 470, 840, 120);
+
+  // Fina tekstura godova drveta
+  ctx.strokeStyle = 'rgba(255, 190, 130, 0.08)';
+  ctx.lineWidth = 2;
+  for (let dw = 510; dw < 1290; dw += 45) {
+    ctx.beginPath();
+    ctx.moveTo(dw, 470);
+    ctx.lineTo(dw + (dw - 900) * 0.15, 585);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Prednji zaobljeni masivni drveni rub ploče stola (lip highlight)
+  ctx.fillStyle = '#5c361f';
+  ctx.fillRect(488, 582, 824, 7);
+  ctx.fillStyle = '#221209';
+  ctx.fillRect(488, 589, 824, 3);
 
   // Bakin heklani milje na sredini stola (ispod monitora i kave!)
   ctx.save();
@@ -1634,13 +1763,78 @@ function drawDoorwayAndControls(isLeft) {
   const lightOn = isLeft ? state.leftLightOn : state.rightLightOn;
   const doorAnim = isLeft ? state.leftDoorAnim : state.rightDoorAnim;
 
+  // 3D Podni svjetlosni snop kad je upaljeno hodničko svjetlo
+  if (lightOn && !state.powerOut) {
+    ctx.save();
+    const beamFloor = new Path2D();
+    if (isLeft) {
+      beamFloor.moveTo(doorX, doorY + doorH);
+      beamFloor.lineTo(doorX + doorW, doorY + doorH);
+      beamFloor.lineTo(doorX + doorW + 110, 720);
+      beamFloor.lineTo(doorX - 50, 720);
+    } else {
+      beamFloor.moveTo(doorX, doorY + doorH);
+      beamFloor.lineTo(doorX + doorW, doorY + doorH);
+      beamFloor.lineTo(doorX + doorW + 50, 720);
+      beamFloor.lineTo(doorX - 110, 720);
+    }
+    beamFloor.closePath();
+
+    const lightFloorGrad = ctx.createLinearGradient(0, doorY + doorH, 0, 720);
+    lightFloorGrad.addColorStop(0, 'rgba(255, 235, 170, 0.35)');
+    lightFloorGrad.addColorStop(0.5, 'rgba(255, 220, 140, 0.16)');
+    lightFloorGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = lightFloorGrad;
+    ctx.fill(beamFloor);
+    ctx.restore();
+  }
+
+  // 3D Betonski okvir vrata (Armirani bunker profil s dubinom zida)
+  ctx.fillStyle = '#1e2129';
+  ctx.fillRect(doorX - 12, doorY - 14, doorW + 24, doorH + 14);
+  ctx.strokeStyle = '#0e1014';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(doorX - 12, doorY - 14, doorW + 24, doorH + 14);
+
   // Unutrašnjost vrata (hodnik u mraku ili osvijetljen)
   ctx.fillStyle = lightOn ? '#353945' : '#050508';
   ctx.fillRect(doorX, doorY, doorW, doorH);
 
-  // Prozor pored vrata
+  // 3D Zidni špalet (dubina betonskog zida unutar prolaza)
+  if (isLeft) {
+    const jambGrad = ctx.createLinearGradient(doorX + doorW - 30, 0, doorX + doorW, 0);
+    jambGrad.addColorStop(0, 'transparent');
+    jambGrad.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+    ctx.fillStyle = jambGrad;
+    ctx.fillRect(doorX + doorW - 30, doorY, 30, doorH);
+  } else {
+    const jambGrad = ctx.createLinearGradient(doorX, 0, doorX + 30, 0);
+    jambGrad.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
+    jambGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = jambGrad;
+    ctx.fillRect(doorX, doorY, 30, doorH);
+  }
+
+  // 3D Okvir prozora s metalnim kosim lajsnama
+  ctx.fillStyle = '#1c1e24';
+  ctx.fillRect(winX - 8, winY - 8, winW + 16, winH + 16);
+  ctx.strokeStyle = '#0e1014';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(winX - 8, winY - 8, winW + 16, winH + 16);
+
+  // Staklo prozora
   ctx.fillStyle = lightOn ? '#2c303a' : '#07070b';
   ctx.fillRect(winX, winY, winW, winH);
+
+  // Dijagonalni stakleni odsjaj na prozoru
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.beginPath();
+  ctx.moveTo(winX + 15, winY);
+  ctx.lineTo(winX + 45, winY);
+  ctx.lineTo(winX + 20, winY + winH);
+  ctx.lineTo(winX - 10, winY + winH);
+  ctx.closePath();
+  ctx.fill();
 
   // Efekt sprinta kroz lijevi prozor dok Omco juri hodnikom
   if (isLeft && state.entities.omco.sprinting) {
@@ -1843,11 +2037,27 @@ function drawCharactersOnCamera(camId) {
   if (present.length === 0) return;
 
   if (camId === '1A') {
-    // Glavna bina - tri izvođača stoje uspravno na bini s punim tijelom pod reflektorima
-    present.forEach(id => {
-      const ch = getCharById(id);
-      const slot = ROOM_SLOTS_3D['1A'].find(s => s.id === id);
-      if (!slot) return;
+    // Glavna bina - tri izvođača stoje uspravno na bini u 3D perspektivi
+    // Dubinsko sortiranje (Z-sort) prema udaljenosti od kamere
+    const sorted = present.map(id => ({
+      id,
+      ch: getCharById(id),
+      slot: ROOM_SLOTS_3D['1A'].find(s => s.id === id)
+    })).filter(item => item.slot).sort((a, b) => a.slot.groundY - b.slot.groundY);
+
+    sorted.forEach(({ ch, slot }) => {
+      // Kontaktna 3D eliptična sjena pod nogama na drvenom podu bine
+      ctx.save();
+      const shadowGrad = ctx.createRadialGradient(slot.groundX, slot.groundY - 3, 6, slot.groundX, slot.groundY - 3, slot.height * 0.28);
+      shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
+      shadowGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.35)');
+      shadowGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = shadowGrad;
+      ctx.beginPath();
+      ctx.ellipse(slot.groundX, slot.groundY - 3, slot.height * 0.28, slot.height * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
       drawFullBodyAnimatronic(ctx, ch, slot.groundX, slot.groundY, slot.height, 'stage', 1.0);
     });
     return;
@@ -1859,6 +2069,19 @@ function drawCharactersOnCamera(camId) {
     const ch = getCharById(id);
     const slot = slots[Math.min(index, slots.length - 1)];
     const ambient = (camId === '3' || camId === '2B' || camId === '4B') ? 0.78 : 0.92;
+
+    // Kontaktna sjena na podu
+    ctx.save();
+    const shadowGrad = ctx.createRadialGradient(slot.groundX, slot.groundY - 3, 5, slot.groundX, slot.groundY - 3, slot.height * 0.25);
+    shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.65)');
+    shadowGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)');
+    shadowGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = shadowGrad;
+    ctx.beginPath();
+    ctx.ellipse(slot.groundX, slot.groundY - 3, slot.height * 0.25, slot.height * 0.07, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     drawFullBodyAnimatronic(ctx, ch, slot.groundX, slot.groundY, slot.height, 'room', ambient);
   });
 }
@@ -2702,190 +2925,798 @@ function drawFullBodyAnimatronic(ctx, charCfg, groundX, groundY, totalHeight, po
   ctx.fillText(charCfg.name, X, Y + 18);
 }
 
-// 1. CAM 1A: GLAVNI STUDIO / BINA (SHOW STAGE)
+// 1. CAM 1A: GLAVNI STUDIO / BINA (SHOW STAGE) - 3D MASTER PERSPECTIVE
 function drawStageCAM1A(ctx) {
   const W = 900, H = 720;
-  const vx = 450, vy = 230;
+  const vx = 450, vy = 240; // Glavna točka nedogleda (Vanishing Point)
 
   ctx.save();
-  ctx.fillStyle = '#080507';
+  // 1. Duboka tamna atmosfera kafane
+  ctx.fillStyle = '#060407';
   ctx.fillRect(0, 0, W, H);
 
-  // Stražnji zid bine
-  ctx.fillStyle = '#14080b';
-  ctx.fillRect(180, 80, 540, 240);
-
-  // Zlatni natpis bine i svjetlucave zvijezde
-  ctx.fillStyle = '#ffcc00';
-  ctx.font = 'bold 22px Courier New';
-  ctx.textAlign = 'center';
-  ctx.fillText('★ BALKAN SHOW STAGE // KAFANA LIVE ★', vx, 115);
-
-  const starTwinkle = Math.sin(Date.now() * 0.006);
-  ctx.fillStyle = starTwinkle > 0 ? '#ffea77' : '#aa8800';
-  ctx.font = '16px Courier New';
-  ctx.fillText('★ ★ ★ MUĐA, BAKA & CHODA ★ ★ ★', vx, 142);
-
-  // Crveni baršunasti zastori na bokovima
-  const drawCurtainFolds = (startX, endX, isLeft) => {
-    const width = Math.abs(endX - startX);
-    ctx.fillStyle = '#4a0c16';
-    ctx.fillRect(isLeft ? startX : startX - width, 0, width, H);
-    // Nabori zastora
-    ctx.strokeStyle = '#2d060c';
-    ctx.lineWidth = 5;
-    for (let x = Math.min(startX, endX) + 12; x < Math.max(startX, endX); x += 22) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.quadraticCurveTo(x + (isLeft ? 8 : -8), 360, x, H);
-      ctx.stroke();
-    }
-    // Zlatni obrub
-    ctx.strokeStyle = '#c99e28';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(isLeft ? endX : startX, 0);
-    ctx.lineTo(isLeft ? endX : startX, H);
-    ctx.stroke();
-  };
-  drawCurtainFolds(0, 160, true);
-  drawCurtainFolds(900, 740, false);
-
-  // Gornji ukrasni nabor zastora
-  ctx.fillStyle = '#5a0f1b';
+  // --------------------------------------------------------------------------
+  // 3D BOČNI ZIDOVI KAFANE I STROP U PERSPEKTIVI
+  // --------------------------------------------------------------------------
+  // Lijevi bočni zid u dubokoj perspektivi (od lijevog ruba ekrana prema bini)
+  const leftWallGrad = ctx.createLinearGradient(0, 0, 180, 0);
+  leftWallGrad.addColorStop(0, '#1c1015');
+  leftWallGrad.addColorStop(0.6, '#130a0d');
+  leftWallGrad.addColorStop(1, '#090507');
+  ctx.fillStyle = leftWallGrad;
   ctx.beginPath();
-  ctx.moveTo(160, 0);
-  ctx.quadraticCurveTo(450, 70, 740, 0);
-  ctx.lineTo(740, 0);
-  ctx.lineTo(160, 0);
+  ctx.moveTo(0, 0);
+  ctx.lineTo(180, 100);
+  ctx.lineTo(180, 530);
+  ctx.lineTo(0, H);
   ctx.closePath();
   ctx.fill();
 
-  // 3D DRVENA BINA U PERSPEKTIVI
-  const stageTopY = 320;
-  const stageFrontY = 510;
-  const stageFrontH = 140;
+  // Vrata za backstage na lijevom zidu u perspektivi
+  ctx.fillStyle = '#10080c';
+  ctx.beginPath();
+  ctx.moveTo(35, 230);
+  ctx.lineTo(115, 210);
+  ctx.lineTo(115, 470);
+  ctx.lineTo(35, 520);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#2d1822';
+  ctx.lineWidth = 3;
+  ctx.stroke();
 
-  // Površina drvenog poda bine
-  const stageFloorPoly = new Path2D();
-  stageFloorPoly.moveTo(220, stageTopY);
-  stageFloorPoly.lineTo(680, stageTopY);
-  stageFloorPoly.lineTo(840, stageFrontY);
-  stageFloorPoly.lineTo(60, stageFrontY);
-  stageFloorPoly.closePath();
+  // Znak za hitni izlaz (IZLAZ / EXIT) iznad bekstejdž vrata
+  ctx.fillStyle = '#112211';
+  ctx.fillRect(45, 178, 60, 20);
+  ctx.strokeStyle = '#225522';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(45, 178, 60, 20);
+  ctx.fillStyle = '#33ff55';
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('⚡ IZLAZ ⚡', 75, 192);
+
+  // Jezoviti crveni odsjaj ispod poluotvorenih bekstejdž vrata
+  const doorGlow = ctx.createRadialGradient(75, 490, 5, 75, 490, 60);
+  doorGlow.addColorStop(0, 'rgba(255, 30, 30, 0.35)');
+  doorGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = doorGlow;
+  ctx.beginPath();
+  ctx.ellipse(75, 490, 55, 20, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Desni bočni zid u perspektivi
+  const rightWallGrad = ctx.createLinearGradient(W, 0, 720, 0);
+  rightWallGrad.addColorStop(0, '#1c1015');
+  rightWallGrad.addColorStop(0.6, '#130a0d');
+  rightWallGrad.addColorStop(1, '#090507');
+  ctx.fillStyle = rightWallGrad;
+  ctx.beginPath();
+  ctx.moveTo(W, 0);
+  ctx.lineTo(720, 100);
+  ctx.lineTo(720, 530);
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Industrijski razvodni ormar sa strujom na desnom zidu
+  ctx.fillStyle = '#22252a';
+  ctx.beginPath();
+  ctx.moveTo(780, 240);
+  ctx.lineTo(845, 255);
+  ctx.lineTo(845, 420);
+  ctx.lineTo(780, 395);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#3a3f47';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Upozorenje na ormaru (žuti trokut)
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath();
+  ctx.moveTo(812, 290);
+  ctx.lineTo(824, 310);
+  ctx.lineTo(800, 310);
+  ctx.closePath();
+  ctx.fill();
+  // Treptajuća crvena lampica napajanja
+  const redBlink = Math.sin(Date.now() * 0.005) > 0.2;
+  ctx.fillStyle = redBlink ? '#ff2222' : '#550808';
+  ctx.beginPath();
+  ctx.arc(812, 272, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Gornji strop u 3D perspektivi
+  const ceilingGrad = ctx.createLinearGradient(0, 0, 0, 100);
+  ceilingGrad.addColorStop(0, '#100c14');
+  ceilingGrad.addColorStop(1, '#060408');
+  ctx.fillStyle = ceilingGrad;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(W, 0);
+  ctx.lineTo(720, 100);
+  ctx.lineTo(180, 100);
+  ctx.closePath();
+  ctx.fill();
+
+  // --------------------------------------------------------------------------
+  // STRAŽNJI ZID BINE SA SVODOM I ZLATNIM NATPISOM
+  // --------------------------------------------------------------------------
+  ctx.fillStyle = '#12070c';
+  ctx.fillRect(180, 100, 540, 245);
+
+  // Zidne letvice / drvene akustične ploče u pozadini
+  ctx.strokeStyle = '#1d0b13';
+  ctx.lineWidth = 2;
+  for (let wx = 195; wx < 710; wx += 24) {
+    ctx.beginPath();
+    ctx.moveTo(wx, 100);
+    ctx.lineTo(wx, 345);
+    ctx.stroke();
+  }
+
+  // Zlatni drveni reljefni okvir i natpis bine
+  ctx.fillStyle = '#0a0407';
+  ctx.fillRect(230, 115, 440, 52);
+  ctx.strokeStyle = '#d4af37';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(230, 115, 440, 52);
+  ctx.strokeStyle = '#8a6e1c';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(234, 119, 432, 44);
+
+  ctx.fillStyle = '#ffea77';
+  ctx.shadowColor = '#ffbb00';
+  ctx.shadowBlur = 10;
+  ctx.font = 'bold 20px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('★ BALKAN SHOW STAGE ★', vx, 142);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#d4af37';
+  ctx.font = 'bold 11px Courier New';
+  ctx.fillText('KAFANA LIVE  •  MUĐA, BAKA & CHODA', vx, 158);
+
+  // Viseće zvjezdice na nevidljivim žicama koje svjetlucaju
+  const starGlowTime = Date.now() * 0.003;
+  const stars = [
+    { x: 220, y: 195, size: 7, phase: 0 },
+    { x: 275, y: 180, size: 9, phase: 1.2 },
+    { x: 350, y: 205, size: 6, phase: 2.5 },
+    { x: 550, y: 200, size: 7, phase: 3.8 },
+    { x: 625, y: 180, size: 9, phase: 4.7 },
+    { x: 680, y: 195, size: 6, phase: 5.4 }
+  ];
+  stars.forEach(st => {
+    // Žica s plafona
+    ctx.strokeStyle = '#332211';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(st.x, 100);
+    ctx.lineTo(st.x, st.y);
+    ctx.stroke();
+
+    const twinkle = 0.5 + 0.5 * Math.sin(starGlowTime + st.phase);
+    ctx.fillStyle = twinkle > 0.4 ? '#ffe566' : '#997722';
+    ctx.beginPath();
+    ctx.arc(st.x, st.y, st.size * (0.8 + 0.3 * twinkle), 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // --------------------------------------------------------------------------
+  // 3D POVIŠENA DRVENA BINA (ELEVATED WOODEN STAGE IN PERSPECTIVE)
+  // --------------------------------------------------------------------------
+  const stageBackY = 345;
+  const stageFrontY = 520;
+  const stageRiserH = 95; // Visina prednjeg čela bine (od 520 do 615)
+
+  // Poligon gornje plohe drvene bine u perspektivi
+  const stageDeckPoly = new Path2D();
+  stageDeckPoly.moveTo(190, stageBackY);
+  stageDeckPoly.lineTo(710, stageBackY);
+  stageDeckPoly.lineTo(825, stageFrontY);
+  stageDeckPoly.lineTo(75, stageFrontY);
+  stageDeckPoly.closePath();
 
   ctx.save();
-  ctx.clip(stageFloorPoly);
-  ctx.fillStyle = '#3a2012';
-  ctx.fillRect(0, stageTopY, W, stageFrontY - stageTopY);
+  ctx.clip(stageDeckPoly);
 
-  // Drvene daske u perspektivi
-  const numPlanks = 9;
-  for (let p = 0; p < numPlanks; p++) {
-    const t0 = Math.pow(p / numPlanks, 1.4);
-    const t1 = Math.pow((p + 1) / numPlanks, 1.4);
-    const y0 = stageTopY + (stageFrontY - stageTopY) * t0;
-    const y1 = stageTopY + (stageFrontY - stageTopY) * t1;
+  // Temeljna drvena boja daski
+  const deckBaseGrad = ctx.createLinearGradient(0, stageBackY, 0, stageFrontY);
+  deckBaseGrad.addColorStop(0, '#241209');
+  deckBaseGrad.addColorStop(0.5, '#3a1f11');
+  deckBaseGrad.addColorStop(1, '#4e2a17');
+  ctx.fillStyle = deckBaseGrad;
+  ctx.fillRect(50, stageBackY, 800, stageFrontY - stageBackY);
 
-    ctx.fillStyle = p % 2 === 0 ? '#452615' : '#331b0e';
-    ctx.fillRect(0, y0, W, y1 - y0);
-    ctx.strokeStyle = '#201007';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, y0, W, y1 - y0);
+  // 3D Daske bine koje se šire iz točke nedogleda (vx, vy)
+  const numDeckRays = 16;
+  ctx.lineWidth = 2;
+  for (let r = 0; r <= numDeckRays; r++) {
+    const t = r / numDeckRays;
+    const topX = 190 + (710 - 190) * t;
+    const botX = 75 + (825 - 75) * t;
+
+    // Sjena između daski
+    ctx.strokeStyle = '#1b0d06';
+    ctx.beginPath();
+    ctx.moveTo(topX, stageBackY);
+    ctx.lineTo(botX, stageFrontY);
+    ctx.stroke();
+
+    // Odsjaj / highlight na rubu svake daske
+    ctx.strokeStyle = 'rgba(255, 180, 110, 0.12)';
+    ctx.beginPath();
+    ctx.moveTo(topX + 1.5, stageBackY);
+    ctx.lineTo(botX + 2, stageFrontY);
+    ctx.stroke();
+  }
+
+  // Poprečne linije spajanja daski u perspektivi
+  const numHorizontalPlanks = 8;
+  for (let p = 1; p < numHorizontalPlanks; p++) {
+    const t = Math.pow(p / numHorizontalPlanks, 1.5);
+    const py = stageBackY + (stageFrontY - stageBackY) * t;
+    const px0 = 190 + (75 - 190) * t;
+    const px1 = 710 + (825 - 710) * t;
+
+    ctx.strokeStyle = '#150904';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(px0, py);
+    ctx.lineTo(px1, py);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // --------------------------------------------------------------------------
+  // PREDNJE ČELO / VERTIKALNA FRONTA BINE U PERSPEKTIVI (y: 520 -> 615)
+  // --------------------------------------------------------------------------
+  const riserPoly = new Path2D();
+  riserPoly.moveTo(75, stageFrontY);
+  riserPoly.lineTo(825, stageFrontY);
+  riserPoly.lineTo(838, stageFrontY + stageRiserH);
+  riserPoly.lineTo(62, stageFrontY + stageRiserH);
+  riserPoly.closePath();
+
+  ctx.save();
+  ctx.clip(riserPoly);
+
+  // Bogata tamna lakirana fronta s gradijentom
+  const riserGrad = ctx.createLinearGradient(0, stageFrontY, 0, stageFrontY + stageRiserH);
+  riserGrad.addColorStop(0, '#1c0e07');
+  riserGrad.addColorStop(0.7, '#2c160b');
+  riserGrad.addColorStop(1, '#150a04');
+  ctx.fillStyle = riserGrad;
+  ctx.fillRect(50, stageFrontY, 800, stageRiserH);
+
+  // Vertikalne dekorativne letvice (wainscot) na čelu bine
+  ctx.strokeStyle = '#120703';
+  ctx.lineWidth = 3;
+  for (let x = 70; x <= 830; x += 28) {
+    ctx.beginPath();
+    ctx.moveTo(x, stageFrontY);
+    ctx.lineTo(x + (x - vx) * 0.04, stageFrontY + stageRiserH);
+    ctx.stroke();
+    // Svjetliji rub letvice
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 2, stageFrontY);
+    ctx.lineTo(x + 2 + (x - vx) * 0.04, stageFrontY + stageRiserH);
+    ctx.stroke();
+    ctx.strokeStyle = '#120703';
+    ctx.lineWidth = 3;
+  }
+
+  // Sjena koju gornja ploha bine baca na prednje čelo
+  const lipShadow = ctx.createLinearGradient(0, stageFrontY, 0, stageFrontY + 22);
+  lipShadow.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+  lipShadow.addColorStop(1, 'transparent');
+  ctx.fillStyle = lipShadow;
+  ctx.fillRect(50, stageFrontY, 800, 22);
+
+  ctx.restore();
+
+  // Zlatna masivna lajsna na vrhu ruba bine
+  ctx.fillStyle = '#d4af37';
+  ctx.fillRect(70, stageFrontY - 4, 760, 6);
+  ctx.fillStyle = '#5c4510';
+  ctx.fillRect(70, stageFrontY + 2, 760, 3);
+
+  // Donja mesingana lajsna na spoju sa podom sale
+  ctx.fillStyle = '#8a6e1c';
+  ctx.fillRect(58, stageFrontY + stageRiserH - 4, 784, 6);
+
+  // --------------------------------------------------------------------------
+  // POD SALE U PRVOM PLANU ISPRED BINE (CHECKERBOARD TILES)
+  // --------------------------------------------------------------------------
+  const foreFloorY = stageFrontY + stageRiserH; // 615
+  const forePoly = new Path2D();
+  forePoly.moveTo(0, foreFloorY);
+  forePoly.lineTo(W, foreFloorY);
+  forePoly.lineTo(W, H);
+  forePoly.lineTo(0, H);
+  forePoly.closePath();
+
+  ctx.save();
+  ctx.clip(forePoly);
+
+  ctx.fillStyle = '#0c0a0f';
+  ctx.fillRect(0, foreFloorY, W, H - foreFloorY);
+
+  // Karirane pločice u 3D perspektivi
+  const numTileCols = 18;
+  const numTileRows = 5;
+  for (let tr = 0; tr < numTileRows; tr++) {
+    const t0 = Math.pow(tr / numTileRows, 1.4);
+    const t1 = Math.pow((tr + 1) / numTileRows, 1.4);
+    const y0 = foreFloorY + (H - foreFloorY) * t0;
+    const y1 = foreFloorY + (H - foreFloorY) * t1;
+
+    for (let tc = 0; tc < numTileCols; tc++) {
+      const u0 = tc / numTileCols;
+      const u1 = (tc + 1) / numTileCols;
+
+      const x0Top = u0 * W;
+      const x1Top = u1 * W;
+      const x0Bot = u0 * W;
+      const x1Bot = u1 * W;
+
+      const isWhite = (tc + tr) % 2 === 0;
+      ctx.fillStyle = isWhite ? '#3a3835' : '#141315';
+
+      ctx.beginPath();
+      ctx.moveTo(x0Top, y0);
+      ctx.lineTo(x1Top, y0);
+      ctx.lineTo(x1Bot, y1);
+      ctx.lineTo(x0Bot, y1);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#09080b';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+
+  // Teški debeli audio kabel koji zmijoliko ide preko prednjeg poda
+  ctx.strokeStyle = '#08080a';
+  ctx.lineWidth = 9;
+  ctx.beginPath();
+  ctx.moveTo(140, foreFloorY);
+  ctx.bezierCurveTo(240, 640, 200, 690, 340, 720);
+  ctx.stroke();
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Drugi kabel s desne strane
+  ctx.strokeStyle = '#0a0a0c';
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(760, foreFloorY);
+  ctx.bezierCurveTo(680, 650, 720, 690, 610, 720);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // --------------------------------------------------------------------------
+  // 3D RAMPA SA REFLEKTORIMA NA PLAFONU (OVERHEAD LIGHTING TRUSS & PAR CANS)
+  // --------------------------------------------------------------------------
+  const trussY = 62;
+  // Glavne horizontalne cijevi aluminijske rešetke
+  ctx.strokeStyle = '#5a626d';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(60, trussY);
+  ctx.lineTo(840, trussY);
+  ctx.moveTo(60, trussY + 22);
+  ctx.lineTo(840, trussY + 22);
+  ctx.stroke();
+
+  // Dijagonalne prečke rešetke (truss webbing)
+  ctx.strokeStyle = '#414852';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let tx = 60; tx < 840; tx += 28) {
+    ctx.moveTo(tx, trussY);
+    ctx.lineTo(tx + 14, trussY + 22);
+    ctx.lineTo(tx + 28, trussY);
+  }
+  ctx.stroke();
+
+  // Čelične sajle koje drže rampu s plafona
+  ctx.strokeStyle = '#2a2f38';
+  ctx.lineWidth = 2;
+  [120, 300, 600, 780].forEach(cx => {
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, trussY);
+    ctx.stroke();
+  });
+
+  // 4 Masivna PAR 64 reflektora montirana na rampu
+  const parSpots = [
+    { x: 220, angle: 0.18, targetX: 295, color: 'rgba(255, 175, 45, ' }, // Za Baku
+    { x: 410, angle: 0.06, targetX: 440, color: 'rgba(255, 235, 160, ' }, // Za Muđu
+    { x: 490, angle: -0.06, targetX: 460, color: 'rgba(255, 235, 160, ' }, // Za Muđu
+    { x: 680, angle: -0.18, targetX: 605, color: 'rgba(255, 195, 50, ' }  // Za Chodu
+  ];
+
+  parSpots.forEach(par => {
+    // Stezaljka i kućište reflektora
+    ctx.save();
+    ctx.translate(par.x, trussY + 22);
+    ctx.rotate(par.angle);
+
+    ctx.fillStyle = '#1c1f24';
+    ctx.fillRect(-10, 0, 20, 26);
+    ctx.strokeStyle = '#3e444f';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-10, 0, 20, 26);
+
+    // Otvor leće
+    ctx.fillStyle = '#ffeaa0';
+    ctx.fillRect(-8, 24, 16, 4);
+
+    ctx.restore();
+  });
+
+  // Disko kugla / zrcalna kugla u sredini
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(vx, 0);
+  ctx.lineTo(vx, 98);
+  ctx.stroke();
+
+  ctx.fillStyle = '#8f9baa';
+  ctx.beginPath();
+  ctx.arc(vx, 108, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#c5d1e0';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Iskre sa zrcalne kugle
+  const sparklePhase = Date.now() * 0.005;
+  for (let sp = 0; sp < 3; sp++) {
+    const sx = vx + Math.cos(sparklePhase + sp * 2.1) * 11;
+    const sy = 108 + Math.sin(sparklePhase + sp * 2.1) * 11;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3);
+  }
+
+  // --------------------------------------------------------------------------
+  // VOLUMETRIJSKI 3D KONUSI SVJETLA I DUBINA ATMOSFERE
+  // --------------------------------------------------------------------------
+  const drawVolumetricCone = (sourceX, sourceY, floorX, floorY, radiusX, radiusY, baseColor) => {
+    ctx.save();
+
+    // 1. Osvijetljena elipsa na drvenom podu
+    const floorGlow = ctx.createRadialGradient(floorX, floorY, 10, floorX, floorY, radiusX);
+    floorGlow.addColorStop(0, baseColor + '0.42)');
+    floorGlow.addColorStop(0.5, baseColor + '0.22)');
+    floorGlow.addColorStop(0.85, baseColor + '0.08)');
+    floorGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = floorGlow;
+    ctx.beginPath();
+    ctx.ellipse(floorX, floorY, radiusX, radiusY, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Volumetrijski stožac svjetlosti kroz maglu/prašinu
+    const beamGrad = ctx.createLinearGradient(sourceX, sourceY, floorX, floorY);
+    beamGrad.addColorStop(0, baseColor + '0.28)');
+    beamGrad.addColorStop(0.4, baseColor + '0.12)');
+    beamGrad.addColorStop(0.85, baseColor + '0.04)');
+    beamGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = beamGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(sourceX - 9, sourceY);
+    ctx.lineTo(sourceX + 9, sourceY);
+    ctx.lineTo(floorX + radiusX * 0.9, floorY);
+    ctx.lineTo(floorX - radiusX * 0.9, floorY);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Plutajuće čestice scenske prašine u zraku (drift dust motes)
+    const timeMote = Date.now() * 0.001;
+    ctx.fillStyle = baseColor + '0.55)';
+    for (let m = 0; m < 5; m++) {
+      const mx = floorX + Math.sin(timeMote * 1.5 + m * 1.7) * (radiusX * 0.55);
+      const my = sourceY + 40 + ((m * 65 + timeMote * 20) % (floorY - sourceY - 50));
+      ctx.beginPath();
+      ctx.arc(mx, my, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  };
+
+  // Tri velika scenska reflektora
+  drawVolumetricCone(220, 86, 295, 475, 125, 45, 'rgba(255, 175, 45, ');  // Baka
+  drawVolumetricCone(450, 86, 450, 465, 140, 50, 'rgba(255, 235, 160, '); // Muđa
+  drawVolumetricCone(680, 86, 605, 475, 125, 45, 'rgba(255, 195, 50, ');  // Choda
+
+  // --------------------------------------------------------------------------
+  // 3D BOGATI CRVENI BARŠUNASTI ZASTORI SA ZLATNIM RESAMA (THEATRE CURTAINS)
+  // --------------------------------------------------------------------------
+  // Gornji ukrasni nabor (Valance / pelmet)
+  const drawValanceSwag = (x1, x2, depth) => {
+    const midX = (x1 + x2) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x1, 75);
+    ctx.quadraticCurveTo(midX, 75 + depth, x2, 75);
+    ctx.lineTo(x2, 60);
+    ctx.lineTo(x1, 60);
+    ctx.closePath();
+
+    const swagGrad = ctx.createLinearGradient(0, 60, 0, 75 + depth);
+    swagGrad.addColorStop(0, '#4a0b14');
+    swagGrad.addColorStop(0.5, '#781524');
+    swagGrad.addColorStop(1, '#32060d');
+    ctx.fillStyle = swagGrad;
+    ctx.fill();
+
+    // Zlatna bordura / resice na dnu nabora
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x1, 75);
+    ctx.quadraticCurveTo(midX, 75 + depth, x2, 75);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  drawValanceSwag(60, 320, 45);
+  drawValanceSwag(310, 590, 52);
+  drawValanceSwag(580, 840, 45);
+
+  // 3D Bočni zastori s valovitim naborima i zlatnim užetom
+  const draw3DCurtainWing = (startX, archX, bottomX, isLeft) => {
+    ctx.save();
+
+    // Tijelo zastora
+    const curtainGrad = ctx.createLinearGradient(isLeft ? 0 : W, 0, archX, 0);
+    curtainGrad.addColorStop(0, '#2e060d');
+    curtainGrad.addColorStop(0.4, '#5c0f1b');
+    curtainGrad.addColorStop(0.7, '#7b1424');
+    curtainGrad.addColorStop(1, '#3b0810');
+
+    ctx.fillStyle = curtainGrad;
+    ctx.beginPath();
+    ctx.moveTo(startX, 60);
+    ctx.lineTo(archX, 60);
+    // Skriveni nabor uvezan zlatnim užetom
+    const cinchX = isLeft ? 155 : 745;
+    const cinchY = 370;
+    ctx.quadraticCurveTo(isLeft ? archX - 10 : archX + 10, 220, cinchX, cinchY);
+    ctx.quadraticCurveTo(isLeft ? cinchX - 15 : cinchX + 15, 450, bottomX, stageFrontY);
+    ctx.lineTo(startX, stageFrontY + 60);
+    ctx.closePath();
+    ctx.fill();
+
+    // Vertikalni nabori i sjene
+    ctx.lineWidth = 4;
+    const foldCount = 6;
+    for (let f = 1; f <= foldCount; f++) {
+      const fxTop = startX + (archX - startX) * (f / (foldCount + 1));
+      const fxCinch = startX + (cinchX - startX) * (f / (foldCount + 1));
+      const fxBot = startX + (bottomX - startX) * (f / (foldCount + 1));
+
+      // Sjena nabora
+      ctx.strokeStyle = '#1d0307';
+      ctx.beginPath();
+      ctx.moveTo(fxTop, 60);
+      ctx.quadraticCurveTo(fxCinch - (isLeft ? 8 : -8), cinchY, fxBot, stageFrontY);
+      ctx.stroke();
+
+      // Svjetliji greben nabora
+      ctx.strokeStyle = 'rgba(235, 110, 130, 0.28)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(fxTop + (isLeft ? 4 : -4), 60);
+      ctx.quadraticCurveTo(fxCinch + (isLeft ? 3 : -3), cinchY, fxBot + (isLeft ? 4 : -4), stageFrontY);
+      ctx.stroke();
+    }
+
+    // Zlatno pleteno uže i viseća kićanka (Tassel)
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(cinchX, cinchY, 18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Kićanka koja visi
+    ctx.fillStyle = '#ffea77';
+    ctx.beginPath();
+    ctx.moveTo(cinchX - 6, cinchY + 16);
+    ctx.lineTo(cinchX + 6, cinchY + 16);
+    ctx.lineTo(cinchX + 11, cinchY + 48);
+    ctx.lineTo(cinchX - 11, cinchY + 48);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#aa851c';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.restore();
+  };
+
+  draw3DCurtainWing(0, 190, 95, true);
+  draw3DCurtainWing(W, 710, 805, false);
+
+  // --------------------------------------------------------------------------
+  // FOOTLIGHTS NA RUBU BINE (MESINGANA SVJETLA U NIZU)
+  // --------------------------------------------------------------------------
+  const numFootlights = 13;
+  for (let fl = 0; fl <= numFootlights; fl++) {
+    const fx = 105 + (795 - 105) * (fl / numFootlights);
+    const fy = stageFrontY - 2;
+
+    // Mesingani oklop
+    ctx.fillStyle = '#2b2108';
+    ctx.beginPath();
+    ctx.arc(fx, fy + 4, 7, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Svijetleća žaruljica
+    const bulbPulse = 0.8 + 0.2 * Math.sin(Date.now() * 0.007 + fl);
+    ctx.fillStyle = fl % 3 === 0 ? `rgba(255, 230, 150, ${bulbPulse})` : `rgba(255, 170, 50, ${bulbPulse})`;
+    ctx.beginPath();
+    ctx.arc(fx, fy - 1, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // --------------------------------------------------------------------------
+  // 3D SCENSKI REKVIZITI (POJAČALO, HARMONIKA, MIKROFON, ZVUČNICI)
+  // --------------------------------------------------------------------------
+  // 1. Marshall / Balkan Stack pojačalo s lijeve strane bine u 3D perspektivi
+  ctx.save();
+  const ampX = 115, ampY = 415, ampW = 60, ampH = 90;
+  // Prednja strana pojačala
+  ctx.fillStyle = '#18181b';
+  ctx.fillRect(ampX, ampY, ampW, ampH);
+  ctx.strokeStyle = '#383b42';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(ampX, ampY, ampW, ampH);
+
+  // Zvučnička tkanina s rešetkom
+  ctx.fillStyle = '#252528';
+  ctx.fillRect(ampX + 5, ampY + 22, ampW - 10, ampH - 28);
+  ctx.strokeStyle = '#151517';
+  ctx.lineWidth = 1;
+  for (let ay = ampY + 26; ay < ampY + ampH - 8; ay += 7) {
+    ctx.beginPath();
+    ctx.moveTo(ampX + 6, ay);
+    ctx.lineTo(ampX + ampW - 6, ay);
+    ctx.stroke();
+  }
+  // Zlatni natpis pojačala "BALKAN"
+  ctx.fillStyle = '#e5c052';
+  ctx.font = 'bold 8px Courier New';
+  ctx.fillText('BALKAN', ampX + 30, ampY + 15);
+  // Crvena LED lampica napajanja
+  ctx.fillStyle = '#ff2222';
+  ctx.beginPath();
+  ctx.arc(ampX + ampW - 10, ampY + 12, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 3D bočna stranica pojačala u perspektivi
+  ctx.fillStyle = '#0f0f11';
+  ctx.beginPath();
+  ctx.moveTo(ampX + ampW, ampY);
+  ctx.lineTo(ampX + ampW + 15, ampY - 8);
+  ctx.lineTo(ampX + ampW + 15, ampY + ampH - 8);
+  ctx.lineTo(ampX + ampW, ampY + ampH);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#28282e';
+  ctx.stroke();
+
+  // 2. Harmonika naslonjena uz pojačalo
+  const harmX = 175, harmY = 445;
+  ctx.fillStyle = '#9e1422';
+  ctx.fillRect(harmX, harmY, 44, 62);
+  ctx.strokeStyle = '#220306';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(harmX, harmY, 44, 62);
+  // Tipke harmonike
+  ctx.fillStyle = '#f8f8f8';
+  for (let k = 0; k < 6; k++) {
+    ctx.fillRect(harmX + 3 + k * 6, harmY + 38, 5, 21);
+    if (k < 5) {
+      ctx.fillStyle = '#111';
+      ctx.fillRect(harmX + 7 + k * 6, harmY + 38, 3, 12);
+      ctx.fillStyle = '#f8f8f8';
+    }
+  }
+  // Mjeh harmonike s naborima
+  ctx.strokeStyle = '#e0d8c8';
+  ctx.lineWidth = 2;
+  for (let m = 0; m < 5; m++) {
+    ctx.strokeRect(harmX + 6 + m * 5, harmY + 6, 4, 26);
   }
   ctx.restore();
 
-  // Prednja vertikalna fronta bine
-  ctx.fillStyle = '#221108';
-  ctx.fillRect(60, stageFrontY, 780, stageFrontH);
-  ctx.strokeStyle = '#110804';
-  ctx.lineWidth = 3;
-  for (let x = 60; x <= 840; x += 35) {
-    ctx.beginPath();
-    ctx.moveTo(x, stageFrontY);
-    ctx.lineTo(x, stageFrontY + stageFrontH);
-    ctx.stroke();
-  }
-  // Zlatna lajsna na vrhu i dnu fronte bine
-  ctx.fillStyle = '#d4af37';
-  ctx.fillRect(55, stageFrontY - 6, 790, 8);
-  ctx.fillRect(55, stageFrontY + stageFrontH - 6, 790, 8);
-
-  // 3 Konusna reflektora koja osvjetljavaju 3 pozicije izvođača
-  const drawSpotlightCone = (floorX, floorY, color) => {
-    ctx.save();
-    const cone = ctx.createRadialGradient(floorX, floorY, 15, floorX, floorY, 130);
-    cone.addColorStop(0, color);
-    cone.addColorStop(0.7, color.replace('0.35', '0.12'));
-    cone.addColorStop(1, 'transparent');
-    ctx.fillStyle = cone;
-    ctx.beginPath();
-    ctx.ellipse(floorX, floorY, 130, 48, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  };
-  drawSpotlightCone(295, 410, 'rgba(255, 180, 50, 0.35)'); // Baka
-  drawSpotlightCone(450, 395, 'rgba(255, 230, 160, 0.42)'); // Muđa
-  drawSpotlightCone(605, 410, 'rgba(255, 200, 60, 0.35)'); // Choda
-
-  // Scenski rekviziti: Pojačala, zvučnici i harmonika
-  // Lijevo koncertno pojačalo
-  ctx.fillStyle = '#1a1a1a';
-  ctx.fillRect(90, 410, 68, 95);
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(90, 410, 68, 95);
-  ctx.fillStyle = '#ff2222';
+  // 3. Desni scenski monitor zvučnik (wedge monitor)
+  ctx.save();
+  ctx.fillStyle = '#16181c';
   ctx.beginPath();
-  ctx.arc(105, 422, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Balkan harmonika naslonjena na lijevo pojačalo
-  ctx.fillStyle = '#aa1122';
-  ctx.fillRect(155, 435, 48, 65);
-  ctx.fillStyle = '#fff';
-  for (let k = 0; k < 6; k++) {
-    ctx.fillRect(158 + k * 7, 472, 5, 22);
-    if (k < 5) {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(162 + k * 7, 472, 3, 13);
-      ctx.fillStyle = '#fff';
-    }
-  }
-  // Mjeh harmonike
-  ctx.strokeStyle = '#eee';
-  ctx.lineWidth = 2;
-  for (let m = 0; m < 5; m++) {
-    ctx.strokeRect(162 + m * 5, 442, 4, 24);
-  }
-
-  // Desni scenski monitor zvučnik (wedge)
-  ctx.fillStyle = '#181818';
-  ctx.beginPath();
-  ctx.moveTo(710, 500);
-  ctx.lineTo(765, 460);
-  ctx.lineTo(795, 495);
+  ctx.moveTo(715, 510);
+  ctx.lineTo(775, 465);
+  ctx.lineTo(805, 505);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = '#333';
+  ctx.strokeStyle = '#323740';
+  ctx.lineWidth = 2;
   ctx.stroke();
+  ctx.fillStyle = '#23272e';
+  ctx.beginPath();
+  ctx.ellipse(755, 488, 14, 9, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 
-  // Statični mikrofoni na stalcima
-  const drawMicStand = (x, y) => {
-    ctx.strokeStyle = '#888';
+  // 4. Scenski mikrofoni na stalcima
+  const draw3DMicStand = (x, y) => {
+    ctx.save();
+    // Okrugla teška baza mikrofona
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 25, 14, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Kromirani okomiti stalak
+    ctx.strokeStyle = '#bbb';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(x, y + 40); ctx.lineTo(x, y);
+    ctx.moveTo(x, y + 25);
+    ctx.lineTo(x, y - 45);
     ctx.stroke();
-    ctx.fillStyle = '#bbb';
+
+    // Vintage Shure 55SH stil mikrofona
+    ctx.fillStyle = '#ddd';
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(x, y - 4, 6, 0, Math.PI * 2);
+    ctx.roundRect ? ctx.roundRect(x - 6, y - 62, 12, 18, 4) : ctx.rect(x - 6, y - 62, 12, 18);
     ctx.fill();
+    ctx.stroke();
+
+    // Horizontalne rešetke mikrofona
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 1;
+    for (let my = y - 58; my < y - 46; my += 3) {
+      ctx.beginPath();
+      ctx.moveTo(x - 5, my);
+      ctx.lineTo(x + 5, my);
+      ctx.stroke();
+    }
+
+    // Kabel mikrofona koji ide po podu
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 25);
+    ctx.quadraticCurveTo(x + 25, y + 35, x + 45, stageFrontY);
+    ctx.stroke();
+
+    ctx.restore();
   };
-  // Prikazuj mikrofone ako lik nije na poziciji
-  if (state.entities.baka.loc !== '1A') drawMicStand(295, 360);
-  if (state.entities.mudja.loc !== '1A') drawMicStand(450, 340);
-  if (state.entities.choda.loc !== '1A') drawMicStand(605, 360);
+
+  // Prikazuj mikrofone kad izvođač nije na bini (ili kao scenski detalj)
+  if (state.entities.baka.loc !== '1A') draw3DMicStand(295, 445);
+  if (state.entities.mudja.loc !== '1A') draw3DMicStand(450, 435);
+  if (state.entities.choda.loc !== '1A') draw3DMicStand(605, 445);
 
   ctx.restore();
 }

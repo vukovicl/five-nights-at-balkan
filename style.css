@@ -453,26 +453,4 @@
     to { opacity: 0.25; transform: scale(0.97); }
   }
 
-/* GUMB ZA BRZI TEST FOXY SPRINTA */
-.foxy-test-btn {
-  position: absolute;
-  top: 92px;
-  left: 20px;
-  background: rgba(180, 20, 20, 0.88);
-  color: #fff;
-  border: 2px solid #ff4444;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: bold;
-  padding: 6px 12px;
-  cursor: pointer;
-  z-index: 35;
-  transition: all 0.2s;
-  letter-spacing: 1px;
-  box-shadow: 0 0 12px rgba(255, 30, 30, 0.45);
-}
-.foxy-test-btn:hover {
-  background: #ff2222;
-  box-shadow: 0 0 18px rgba(255, 40, 40, 0.85);
-  transform: scale(1.05);
-}
+
