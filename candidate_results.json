@@ -1,0 +1,222 @@
+{
+  "P1: Base 0.11 (umjesto 0.14), Dev 0.22, Mult 0.03, Penal 2.0": [
+    {
+      "night": 1,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "41.5%",
+      "avgOmcoHits": "2.00"
+    },
+    {
+      "night": 2,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "30.5%",
+      "avgOmcoHits": "3.99"
+    },
+    {
+      "night": 3,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "19.1%",
+      "avgOmcoHits": "4.99"
+    },
+    {
+      "night": 4,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "6.8%",
+      "avgOmcoHits": "6.07"
+    },
+    {
+      "night": 5,
+      "winRate": "0.2%",
+      "winsPowerOut": 1,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "7.68"
+    },
+    {
+      "night": 6,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "8.75"
+    }
+  ],
+  "P2: Base 0.12, Dev 0.22, Mult 0.03, Penal 2.0": [
+    {
+      "night": 1,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "37.9%",
+      "avgOmcoHits": "2.00"
+    },
+    {
+      "night": 2,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "26.8%",
+      "avgOmcoHits": "3.99"
+    },
+    {
+      "night": 3,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "15.3%",
+      "avgOmcoHits": "4.99"
+    },
+    {
+      "night": 4,
+      "winRate": "100.0%",
+      "winsPowerOut": 31,
+      "medianPower": "2.9%",
+      "avgOmcoHits": "6.07"
+    },
+    {
+      "night": 5,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "7.17"
+    },
+    {
+      "night": 6,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "8.18"
+    }
+  ],
+  "P3: Base 0.12, Dev 0.24, Mult 0.02, Penal 2.0": [
+    {
+      "night": 1,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "36.6%",
+      "avgOmcoHits": "2.00"
+    },
+    {
+      "night": 2,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "25.5%",
+      "avgOmcoHits": "3.99"
+    },
+    {
+      "night": 3,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "14.1%",
+      "avgOmcoHits": "4.99"
+    },
+    {
+      "night": 4,
+      "winRate": "99.4%",
+      "winsPowerOut": 88,
+      "medianPower": "1.8%",
+      "avgOmcoHits": "6.07"
+    },
+    {
+      "night": 5,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "7.12"
+    },
+    {
+      "night": 6,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "8.11"
+    }
+  ],
+  "P4: Minimalna intervencija: Base 0.12 (baza ureda manja za 14%), Mult 0.03, Penal 2.0, Omčo pauzira na CAM": [
+    {
+      "night": 1,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "36.6%",
+      "avgOmcoHits": "2.00"
+    },
+    {
+      "night": 2,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "24.9%",
+      "avgOmcoHits": "3.99"
+    },
+    {
+      "night": 3,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "12.6%",
+      "avgOmcoHits": "4.99"
+    },
+    {
+      "night": 4,
+      "winRate": "89.0%",
+      "winsPowerOut": 250,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "6.04"
+    },
+    {
+      "night": 5,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "7.01"
+    },
+    {
+      "night": 6,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "8.00"
+    }
+  ],
+  "P5: Samo baza 0.11 + Penal 2.0 + Omčo pauzira na CAM (množitelj ostaje 0.06)": [
+    {
+      "night": 1,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "40.2%",
+      "avgOmcoHits": "2.00"
+    },
+    {
+      "night": 2,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "26.7%",
+      "avgOmcoHits": "3.99"
+    },
+    {
+      "night": 3,
+      "winRate": "100.0%",
+      "winsPowerOut": 0,
+      "medianPower": "12.3%",
+      "avgOmcoHits": "4.99"
+    },
+    {
+      "night": 4,
+      "winRate": "38.8%",
+      "winsPowerOut": 177,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "6.01"
+    },
+    {
+      "night": 5,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "6.80"
+    },
+    {
+      "night": 6,
+      "winRate": "0.0%",
+      "winsPowerOut": 0,
+      "medianPower": "0.0%",
+      "avgOmcoHits": "7.36"
+    }
+  ]
+}

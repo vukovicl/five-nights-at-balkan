@@ -595,6 +595,38 @@ const NIGHT_AI_PRESETS = {
 // ----------------------------------------------------------------------------
 // 3. STANJE IGRE I KONFIGURACIJA
 // ----------------------------------------------------------------------------
+// ============================================================================
+// BALANS I ENERGETSKI MODEL IGRE (USKLAĐENA HIBRIDNA KONFIGURACIJA)
+// ============================================================================
+const OLD_BALANCE_CONFIG = {
+  // Arhivirano radi usporedbe:
+  baseDrainRate: 0.14,
+  devDrainRate: 0.24,
+  omcoDoorPenalty: 3.5,
+  nightMultiplierFormula: '1 + (night - 1) * 0.06',
+  omcoPausedOnlyOnCam1c: true
+};
+
+const BALANCE_CONFIG = {
+  // 1. Potrošnja struje ureda i uređaja
+  baseDrainRate: 0.11, // Bazna potrošnja agregata (1 crtica - ured i ventilator)
+  devDrainRate: 0.20,  // Potrošnja po dodatnom uređaju (vrata, svjetlo, kamera)
+
+  // 2. Množitelji potrošnje po noćima (Noć 1 do Noć 5, Noć 6 / Custom Night)
+  // Noć 1: 1.00, Noć 2: 1.03, Noć 3: 1.06, Noć 4: 1.09, Noć 5: 1.12, Noć 6 (Custom): 1.15
+  nightMultipliers: [1.00, 1.03, 1.06, 1.09, 1.12, 1.15],
+
+  // 3. Omčo mehanika
+  omcoDoorPenalty: 1.5,   // Gubitak energije pri blokiranom udarcu u lijeva vrata (-1.5%)
+  omcoPauseOnAnyCam: true // Monitor otvoren na bilo kojoj kameri pauzira Omčin normalni napredak
+};
+
+function getNightMultiplier(nightNum) {
+  const mults = BALANCE_CONFIG.nightMultipliers;
+  const idx = Math.max(1, Math.min(mults.length, nightNum)) - 1;
+  return mults[idx] !== undefined ? mults[idx] : 1.0;
+}
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -887,6 +919,24 @@ function startNight(nightNum, isCustomNight = false) {
   state.doorImpactNotice = '';
   state.doorImpactNoticeTimer = 0;
 
+  // Razvojna statistika smjene (isključeno po defaultu, aktivira se s ?dev=1 ili window.toggleDevStats())
+  const isDevUrl = typeof window !== 'undefined' && window.location && new URLSearchParams(window.location.search).get('dev') === '1';
+  state.devStats = {
+    enabled: state.devStats ? state.devStats.enabled : isDevUrl,
+    camSeconds: 0,
+    leftDoorSeconds: 0,
+    rightDoorSeconds: 0,
+    leftLightSeconds: 0,
+    rightLightSeconds: 0,
+    basePowerDrained: 0,
+    devicesPowerDrained: 0,
+    omcoHits: 0,
+    omcoPenalTotal: 0,
+    powerOutTime: null,
+    remainingPower: 100.0,
+    outcome: null
+  };
+
   document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('hud-layer').classList.remove('hidden');
   document.getElementById('hud-night').textContent = nightNum === 6 ? 'CUSTOM NIGHT' : `NOĆ ${nightNum}`;
@@ -943,7 +993,8 @@ function toggleRightLight() {
 }
 
 function triggerJumpscare(charId, reasonText) {
-  if (state.screen === 'JUMPSCARE') return;
+  // Pravilo 4: Kada ishod postane pobjeda ili poraz, drugi ishod se više ne može aktivirati
+  if (state.screen !== 'PLAYING') return;
   state.screen = 'JUMPSCARE';
   state.camOpen = false;
   state.windingTape = false;
@@ -954,9 +1005,17 @@ function triggerJumpscare(charId, reasonText) {
   document.getElementById('hud-layer').classList.add('hidden');
   audio.updateContinuousAudio(false, false, false, false);
   audio.playJumpscareScream(state.jumpscareChar.pitch);
+
+  if (state.devStats) {
+    state.devStats.outcome = `PORAZ (JUMPSCARE): ${reasonText}`;
+    state.devStats.remainingPower = state.power;
+    if (state.devStats.enabled) printDevSummary();
+  }
 }
 
 function triggerVictory() {
+  // Pravilo 4: Ako je već nastupio jumpscare, pobjeda se ne može naknadno aktivirati
+  if (state.screen !== 'PLAYING') return;
   state.screen = 'VICTORY';
   state.camOpen = false;
   state.windingTape = false;
@@ -966,7 +1025,43 @@ function triggerVictory() {
 
   const bonuses = ['120,00 € + Bon za 10 ćevapa', '150,00 € + Gajba piva', '185,50 € + Novi mikrofon', '240,00 € + Bakšiš od donacija', '500,00 € + Titula Glavnog Moda', '999,99 € + Vlasništvo nad Kafanom'];
   state.earnedPay = bonuses[(state.selectedNight - 1) % bonuses.length];
+
+  if (state.devStats) {
+    state.devStats.outcome = 'POBJEDA (06:00 AM)';
+    state.devStats.remainingPower = state.power;
+    if (state.devStats.enabled) printDevSummary();
+  }
 }
+
+function printDevSummary() {
+  if (!state.devStats) return;
+  const s = state.devStats;
+  const nightMult = getNightMultiplier(state.selectedNight);
+  console.group('%c📊 RAZVOJNA STATISTIKA SMJENE (DEV STATS)', 'color: #ffaa00; font-size: 13px; font-weight: bold;');
+  console.log(`Noć: ${state.selectedNight === 6 ? 'CUSTOM NIGHT' : 'NOĆ ' + state.selectedNight}`);
+  console.log(`Ishod: %c${s.outcome}`, s.outcome && s.outcome.startsWith('POBJEDA') ? 'color:#22dd44;font-weight:bold;' : 'color:#ff3333;font-weight:bold;');
+  console.log(`Preostala energija agregata: ${Math.max(0, s.remainingPower).toFixed(2)}%`);
+  console.log(`Vrijeme nestanka struje: ${s.powerOutTime !== null ? s.powerOutTime.toFixed(1) + 's' : 'Struja izdržala (nije nestalo)'}`);
+  console.log(`Broj Omčinih blokiranih udaraca: ${s.omcoHits} (ukupni penal: -${s.omcoPenalTotal.toFixed(1)}%)`);
+  console.table({
+    'Osnovno napajanje (Baza)': { 'Vrijeme': '360.0s', 'Potrošeno': s.basePowerDrained.toFixed(2) + '%' },
+    'CCTV Monitor (Kamere)': { 'Vrijeme': s.camSeconds.toFixed(1) + 's', 'Potrošeno': ((s.camSeconds * BALANCE_CONFIG.devDrainRate) * nightMult).toFixed(2) + '%' },
+    'Lijeva roletna (Vrata)': { 'Vrijeme': s.leftDoorSeconds.toFixed(1) + 's', 'Potrošeno': ((s.leftDoorSeconds * BALANCE_CONFIG.devDrainRate) * nightMult).toFixed(2) + '%' },
+    'Desna roletna (Vrata)': { 'Vrijeme': s.rightDoorSeconds.toFixed(1) + 's', 'Potrošeno': ((s.rightDoorSeconds * BALANCE_CONFIG.devDrainRate) * nightMult).toFixed(2) + '%' },
+    'Lijevo hodničko svjetlo': { 'Vrijeme': s.leftLightSeconds.toFixed(1) + 's', 'Potrošeno': ((s.leftLightSeconds * BALANCE_CONFIG.devDrainRate) * nightMult).toFixed(2) + '%' },
+    'Desno hodničko svjetlo': { 'Vrijeme': s.rightLightSeconds.toFixed(1) + 's', 'Potrošeno': ((s.rightLightSeconds * BALANCE_CONFIG.devDrainRate) * nightMult).toFixed(2) + '%' },
+    'Omčo udarci u vrata': { 'Vrijeme': '-', 'Potrošeno': '-' + s.omcoPenalTotal.toFixed(1) + '%' }
+  });
+  console.groupEnd();
+}
+
+window.getDevReport = () => printDevSummary();
+window.toggleDevStats = (enable) => {
+  if (!state.devStats) state.devStats = { enabled: true };
+  state.devStats.enabled = enable !== undefined ? enable : !state.devStats.enabled;
+  console.log('Dev stats logging is now:', state.devStats.enabled ? 'ENABLED' : 'DISABLED');
+  return state.devStats.enabled;
+};
 
 // ----------------------------------------------------------------------------
 // 6. UPDATE PETLJA (Fizika, Potrošnja Struje, AI Streamera)
@@ -1058,13 +1153,29 @@ function updateGame(dt) {
   state.usageLevel = Math.min(5, usage);
 
   // Brzina trošenja struje ovisno o crticama i noći
-  const nightDrainMultiplier = 1 + (state.selectedNight - 1) * 0.06;
-  const drainPerSec = (0.14 + (state.usageLevel - 1) * 0.24) * nightDrainMultiplier;
+  const nightDrainMultiplier = getNightMultiplier(state.selectedNight);
+  const baseDrain = BALANCE_CONFIG.baseDrainRate * nightDrainMultiplier * dt;
+  const devDrain = ((state.usageLevel - 1) * BALANCE_CONFIG.devDrainRate) * nightDrainMultiplier * dt;
+  const drainPerSec = (BALANCE_CONFIG.baseDrainRate + (state.usageLevel - 1) * BALANCE_CONFIG.devDrainRate) * nightDrainMultiplier;
   state.power = Math.max(0, state.power - drainPerSec * dt);
+
+  // Akumulacija razvojne statistike
+  if (state.devStats) {
+    if (state.camOpen) state.devStats.camSeconds += dt;
+    if (state.leftDoorClosed) state.devStats.leftDoorSeconds += dt;
+    if (state.rightDoorClosed) state.devStats.rightDoorSeconds += dt;
+    if (state.leftLightOn) state.devStats.leftLightSeconds += dt;
+    if (state.rightLightOn) state.devStats.rightLightSeconds += dt;
+    state.devStats.basePowerDrained += baseDrain;
+    state.devStats.devicesPowerDrained += devDrain;
+  }
 
   if (state.power <= 0) {
     state.power = 0;
     state.powerOut = true;
+    if (state.devStats && state.devStats.powerOutTime === null) {
+      state.devStats.powerOutTime = state.nightTimeElapsed;
+    }
     state.leftDoorClosed = false;
     state.rightDoorClosed = false;
     state.leftLightOn = false;
@@ -1140,7 +1251,8 @@ function updateGame(dt) {
   const omcoEnt = state.entities.omco;
   if (omcoAI > 0 || omcoEnt.sprinting) {
     if (!omcoEnt.sprinting) {
-      const watchingOmco = state.camOpen && state.currentCam === '1C';
+      // Monitor otvoren na bilo kojoj kameri pauzira Omčin normalni napredak
+      const watchingOmco = BALANCE_CONFIG.omcoPauseOnAnyCam ? state.camOpen : (state.camOpen && state.currentCam === '1C');
       if (!watchingOmco) {
         omcoEnt.progress += (0.55 + omcoAI * 0.16) * dt;
         if (omcoEnt.progress > 33 && omcoEnt.stage === 0) omcoEnt.stage = 1;
@@ -1171,13 +1283,17 @@ function updateGame(dt) {
         if (state.leftDoorClosed) {
           // Odbio se od zatvorena vrata!
           audio.playDoorBang();
-          state.power = Math.max(0, state.power - 3.5);
+          state.power = Math.max(0, state.power - BALANCE_CONFIG.omcoDoorPenalty);
+          if (state.devStats) {
+            state.devStats.omcoHits++;
+            state.devStats.omcoPenalTotal += BALANCE_CONFIG.omcoDoorPenalty;
+          }
           omcoEnt.sprinting = false;
           omcoEnt.stage = 0;
           omcoEnt.progress = Math.random() * 20;
           state.officeShake = 1.0;
           state.doorImpactNoticeTimer = 2.5;
-          state.doorImpactNotice = '⚡ OMČO JE UDARIO U LIJEVA VRATA! (-3.5% STRUJE)';
+          state.doorImpactNotice = `⚡ OMČO JE UDARIO U LIJEVA VRATA! (-${BALANCE_CONFIG.omcoDoorPenalty.toFixed(1)}% STRUJE)`;
           spawnDoorSparks(230, 320, 32);
         } else {
           triggerJumpscare('omco', 'OMČO TE UHVATIO U SPRINTU KROZ LIJEVI HODNIK!');
