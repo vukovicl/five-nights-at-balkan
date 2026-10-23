@@ -248,6 +248,62 @@ class BalkanAudioEngine {
     }
   }
 
+  // Foxy sprint krik pri kretanju u trk
+  playFoxySprintCry() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const panner = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(260, now);
+    osc.frequency.exponentialRampToValueAtTime(720, now + 0.16);
+    osc.frequency.linearRampToValueAtTime(170, now + 0.52);
+
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
+
+    osc.connect(gain);
+    if (panner) {
+      panner.pan.setValueAtTime(-0.85, now);
+      gain.connect(panner);
+      panner.connect(this.ctx.destination);
+    } else {
+      gain.connect(this.ctx.destination);
+    }
+    osc.start(now);
+    osc.stop(now + 0.62);
+  }
+
+  // Pojedinacni ritmicki teški korak sprinta kroz hodnik s lijevom stereo panoramom
+  playSprintStep(progress = 0) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const panner = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(95 + progress * 55, now);
+    osc.frequency.exponentialRampToValueAtTime(26, now + 0.08);
+
+    const vol = 0.28 + progress * 0.45;
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+    osc.connect(gain);
+    if (panner) {
+      panner.pan.setValueAtTime(-0.85 + progress * 0.4, now);
+      gain.connect(panner);
+      panner.connect(this.ctx.destination);
+    } else {
+      gain.connect(this.ctx.destination);
+    }
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
   // Zveckanje lonaca i tava u Kuhinji (CAM 6)
   playKitchenPots() {
     if (!this.ctx) return;
@@ -591,9 +647,15 @@ let state = {
     mudja: { loc: '1A', moveTimer: 0, doorWait: 0 },
     baka:  { loc: '1A', moveTimer: 0, doorWait: 0 },
     choda: { loc: '1A', moveTimer: 0, doorWait: 0, kitchenNoiseTimer: 0 },
-    omco:  { stage: 0, progress: 0, sprinting: false, sprintTimer: 0 }, // 0: zavjesa, 1: viri, 2: vani, 3: SPRINT!
+    omco:  { stage: 0, progress: 0, sprinting: false, sprintTimer: 0, stepTimer: 0 }, // 0: zavjesa, 1: viri, 2: vani, 3: SPRINT!
     puppet: { released: false, attackTimer: 0 }
   },
+
+  // Efekti tresnje i iskri pri udarcu Foxyja u vrata
+  officeShake: 0,
+  doorSparks: [],
+  doorImpactNotice: '',
+  doorImpactNoticeTimer: 0,
 
   // Jumpscare i završnica
   jumpscareChar: null,
@@ -768,6 +830,13 @@ document.getElementById('btn-mute-call').addEventListener('click', () => {
   document.getElementById('phone-box').classList.add('hidden');
 });
 
+const btnFoxyTest = document.getElementById('btn-foxy-test');
+if (btnFoxyTest) {
+  btnFoxyTest.addEventListener('click', () => {
+    triggerFoxySprintTest();
+  });
+}
+
 document.getElementById('cam-toggle-bar').addEventListener('click', () => {
   toggleCameraMonitor();
 });
@@ -816,9 +885,13 @@ function startNight(nightNum, isCustomNight = false) {
     mudja:  { loc: '1A', moveTimer: 0, doorWait: 0 },
     baka:   { loc: '1A', moveTimer: 0, doorWait: 0 },
     choda:  { loc: '1A', moveTimer: 0, doorWait: 0, kitchenNoiseTimer: 0 },
-    omco:   { stage: 0, progress: 0, sprinting: false, sprintTimer: 0 },
+    omco:   { stage: 0, progress: 0, sprinting: false, sprintTimer: 0, stepTimer: 0 },
     puppet: { released: false, attackTimer: 0 }
   };
+  state.officeShake = 0;
+  state.doorSparks = [];
+  state.doorImpactNotice = '';
+  state.doorImpactNoticeTimer = 0;
 
   document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('hud-layer').classList.remove('hidden');
@@ -1037,12 +1110,32 @@ function updateGame(dt) {
     }
   }
 
+  // Prigušenje trešnje ureda i obavijesti o udarcu
+  if (state.officeShake > 0) {
+    state.officeShake = Math.max(0, state.officeShake - dt * 2.8);
+  }
+  if (state.doorImpactNoticeTimer > 0) {
+    state.doorImpactNoticeTimer = Math.max(0, state.doorImpactNoticeTimer - dt);
+  }
+
+  // Fizika iskri od udarca na vratima
+  if (state.doorSparks && state.doorSparks.length > 0) {
+    for (let i = state.doorSparks.length - 1; i >= 0; i--) {
+      const sp = state.doorSparks[i];
+      sp.x += sp.vx * dt;
+      sp.y += sp.vy * dt;
+      sp.vy += 620 * dt;
+      sp.life -= dt;
+      if (sp.life <= 0) state.doorSparks.splice(i, 1);
+    }
+  }
+
   // --------------------------------------------------------------------------
   // AI 2: OMČO (Foxy tip - Green Screen CAM 1C -> Sprint CAM 2A -> Lijeva vrata)
   // --------------------------------------------------------------------------
   const omcoAI = getCharById('omco').aiLevel;
   const omcoEnt = state.entities.omco;
-  if (omcoAI > 0) {
+  if (omcoAI > 0 || omcoEnt.sprinting) {
     if (!omcoEnt.sprinting) {
       const watchingOmco = state.camOpen && state.currentCam === '1C';
       if (!watchingOmco) {
@@ -1053,13 +1146,24 @@ function updateGame(dt) {
           omcoEnt.stage = 3;
           omcoEnt.sprinting = true;
           omcoEnt.sprintTimer = 0;
+          omcoEnt.stepTimer = 0;
+          audio.playFoxySprintCry();
           audio.playFootsteps(true);
         }
       }
     } else {
-      // Omčo trči kroz lijevi hodnik! Igrač ima ~2.2 sekunde da spusti lijevu roletnu
+      // Omčo trči kroz lijevi hodnik!
       omcoEnt.sprintTimer += dt;
-      const sprintLimit = (state.camOpen && state.currentCam === '2A') ? 1.75 : 2.35;
+      const sprintLimit = 2.25;
+
+      // Ritmički koraci tijekom sprinta
+      omcoEnt.stepTimer = (omcoEnt.stepTimer || 0) + dt;
+      const stepInterval = Math.max(0.08, 0.14 - (omcoEnt.sprintTimer / sprintLimit) * 0.05);
+      if (omcoEnt.stepTimer >= stepInterval) {
+        omcoEnt.stepTimer = 0;
+        audio.playSprintStep(omcoEnt.sprintTimer / sprintLimit);
+      }
+
       if (omcoEnt.sprintTimer >= sprintLimit) {
         if (state.leftDoorClosed) {
           // Odbio se od zatvorena vrata!
@@ -1068,6 +1172,10 @@ function updateGame(dt) {
           omcoEnt.sprinting = false;
           omcoEnt.stage = 0;
           omcoEnt.progress = Math.random() * 20;
+          state.officeShake = 1.0;
+          state.doorImpactNoticeTimer = 2.5;
+          state.doorImpactNotice = '⚡ OMČO JE UDARIO U LIJEVA VRATA! (-3.5% STRUJE)';
+          spawnDoorSparks(230, 320, 32);
         } else {
           triggerJumpscare('omco', 'OMČO TE UHVATIO U SPRINTU KROZ LIJEVI HODNIK!');
           return;
@@ -1273,7 +1381,15 @@ function drawCharacterPortrait(g, charCfg, cx, cy, radius, isJumpscare = false) 
 // ----------------------------------------------------------------------------
 function renderOffice() {
   ctx.save();
-  ctx.translate(-state.panX, 0);
+
+  // Efekt tresnje ureda pri udarcu Foxyja u metalna vrata
+  let offX = -state.panX;
+  let offY = 0;
+  if (state.officeShake > 0) {
+    offX += (Math.random() - 0.5) * state.officeShake * 22;
+    offY += (Math.random() - 0.5) * state.officeShake * 18;
+  }
+  ctx.translate(offX, offY);
 
   const W = state.officeWidth; // 1800
   const H = canvas.height;     // 720
@@ -1472,6 +1588,32 @@ function renderOffice() {
     }
   }
 
+  // Renderiranje iskri od udarca u metalna lijeva vrata
+  if (state.doorSparks && state.doorSparks.length > 0) {
+    state.doorSparks.forEach(sp => {
+      const alpha = Math.max(0, sp.life / sp.maxLife);
+      ctx.fillStyle = sp.color;
+      ctx.globalAlpha = alpha;
+      ctx.fillRect(sp.x, sp.y, sp.size, sp.size);
+      ctx.globalAlpha = 1.0;
+    });
+  }
+
+  // Obavijest na vrhu ekrana u uredu
+  if (state.doorImpactNoticeTimer > 0) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(20, 0, 0, 0.88)';
+    ctx.fillRect(state.panX + canvas.width / 2 - 280, 75, 560, 42);
+    ctx.strokeStyle = '#ff3333';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(state.panX + canvas.width / 2 - 280, 75, 560, 42);
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 15px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(state.doorImpactNotice, state.panX + canvas.width / 2, 102);
+    ctx.restore();
+  }
+
   ctx.restore();
 }
 
@@ -1499,6 +1641,21 @@ function drawDoorwayAndControls(isLeft) {
   // Prozor pored vrata
   ctx.fillStyle = lightOn ? '#2c303a' : '#07070b';
   ctx.fillRect(winX, winY, winW, winH);
+
+  // Efekt sprinta kroz lijevi prozor dok Omco juri hodnikom
+  if (isLeft && state.entities.omco.sprinting) {
+    const p = Math.min(1.0, state.entities.omco.sprintTimer / 2.25);
+    const flashAlpha = 0.22 + 0.35 * Math.abs(Math.sin(state.entities.omco.sprintTimer * 24));
+    ctx.fillStyle = `rgba(255, 30, 30, ${flashAlpha})`;
+    ctx.fillRect(winX, winY, winW, winH);
+
+    // Silueta Omce koja projuri pored prozora pred sama vrata (p >= 0.65)
+    if (p >= 0.65) {
+      const winProg = (p - 0.65) / 0.35;
+      const silX = (winX + winW) - winProg * (winW + 70);
+      drawFoxySilhouette(ctx, silX, winY + 95, 46);
+    }
+  }
 
   // Ako je upaljeno svjetlo i streamer je pred vratima – prikaži ga!
   if (lightOn && !state.powerOut) {
@@ -1689,47 +1846,12 @@ function drawCameraRoomBackground(camId) {
       ctx.fillText('SALA KAFANE - STOLOVI S KARIRANIM STOLNJACIMA', 450, 140);
       break;
 
-    case '1C': // Green Screen Kutak (Omčo i zavjesa u 3 faze)
-      ctx.fillStyle = '#115522';
-      ctx.fillRect(210, 110, 480, 390);
-      ctx.fillStyle = '#662288';
-      const st = state.entities.omco.stage;
-      if (st === 0) {
-        // Zavjesa potpuno zatvorena
-        ctx.fillRect(210, 110, 480, 390);
-        ctx.fillStyle = '#fff';
-        ctx.fillText('ZAVJESA ZATVORENA - "NE OMETAJ SNIMANJE"', 450, 300);
-      } else if (st === 1) {
-        // Zavjesa malo razmaknuta, Omčo viri
-        ctx.fillRect(210, 110, 190, 390);
-        ctx.fillRect(500, 110, 190, 390);
-        drawCharacterPortrait(ctx, getCharById('omco'), 450, 300, 62);
-      } else if (st === 2) {
-        // Omčo izašao pred zavjesu, spreman za sprint!
-        ctx.fillRect(210, 110, 90, 390);
-        ctx.fillRect(600, 110, 90, 390);
-        drawCharacterPortrait(ctx, getCharById('omco'), 450, 330, 95, true);
-        ctx.fillStyle = '#ff3333';
-        ctx.fillText('⚠️ SPREMAN ZA SPRINT!', 450, 165);
-      } else {
-        // Prazno - TRČI!
-        ctx.fillStyle = '#ff2222';
-        ctx.font = 'bold 28px Courier New';
-        ctx.fillText('⚠️ POBJJJEGAO JE! SPUŠTAJ LIJEVU ROLETNU!', 450, 310);
-      }
+    case '1C': // Green Screen Kutak (Omco i zavjesa)
+      drawGreenScreenCAM1C(ctx, getCharById('omco'), state.entities.omco);
       break;
 
-    case '2A': // Lijevi hodnik (animacija sprinta!)
-      ctx.fillText('LIJEVI HODNIK PREMA UREDU', 450, 130);
-      if (state.entities.omco.sprinting) {
-        const p = Math.min(1, state.entities.omco.sprintTimer / 1.8);
-        const r = 40 + p * 95;
-        const y = 220 + p * 180;
-        drawCharacterPortrait(ctx, getCharById('omco'), 450, y, r, true);
-        ctx.fillStyle = '#ff2222';
-        ctx.font = 'bold 26px Courier New';
-        ctx.fillText('🏃💨 SPRINTA PREMA LIJEVIM VRATIMA! [A]', 450, 560);
-      }
+    case '2A': // Lijevi hodnik (animacija sprinta Foxy tipa!)
+      drawWestHallwayCAM2A(ctx, getCharById('omco'), state.entities.omco);
       break;
 
     case '3': // Špajza s gajbama piva
@@ -2065,6 +2187,8 @@ window.addEventListener('keydown', e => {
     toggleLeftLight();
   } else if (key === 'c') {
     toggleRightLight();
+  } else if (key === 'f') {
+    triggerFoxySprintTest();
   } else if (['1', '2', '3', '4', '5', '6'].includes(key)) {
     const found = Object.values(CAMERAS).find(c => c.key === key);
     if (found) {
@@ -2074,6 +2198,749 @@ window.addEventListener('keydown', e => {
     }
   }
 });
+
+
+// ============================================================================
+// ANIMACIJA BJEŽANJA / SPRINTA FOXY TIPA (OMČO - CAM 1C & CAM 2A)
+// ============================================================================
+
+function triggerFoxySprintTest() {
+  if (state.screen !== 'PLAYING') return;
+  const omcoEnt = state.entities.omco;
+  omcoEnt.stage = 3;
+  omcoEnt.sprinting = true;
+  omcoEnt.sprintTimer = 0;
+  omcoEnt.stepTimer = 0;
+  audio.playFoxySprintCry();
+  audio.playFootsteps(true);
+}
+
+function spawnDoorSparks(x, y, count = 28) {
+  if (!state.doorSparks) state.doorSparks = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (0.15 + Math.random() * 0.7) * Math.PI;
+    const speed = 140 + Math.random() * 320;
+    state.doorSparks.push({
+      x: x + (Math.random() - 0.5) * 45,
+      y: y + Math.random() * 60,
+      vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 80,
+      vy: -Math.sin(angle) * speed * 0.45,
+      life: 0.3 + Math.random() * 0.45,
+      maxLife: 0.75,
+      size: 2.5 + Math.random() * 3.5,
+      color: Math.random() > 0.35 ? '#ffee44' : '#ffffff'
+    });
+  }
+}
+
+function drawFoxySilhouette(ctx, x, y, radius) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(0.35);
+  ctx.fillStyle = '#0a0a0e';
+
+  // Glava
+  ctx.beginPath();
+  ctx.arc(0, -radius * 0.3, radius * 0.55, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lisicje uho
+  ctx.beginPath();
+  ctx.moveTo(-radius * 0.3, -radius * 0.5);
+  ctx.lineTo(-radius * 0.7, -radius * 1.1);
+  ctx.lineTo(-radius * 0.1, -radius * 0.8);
+  ctx.closePath();
+  ctx.fill();
+
+  // Otvorena celjust
+  ctx.beginPath();
+  ctx.ellipse(0, radius * 0.2, radius * 0.45, radius * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crvene uzarene oci
+  ctx.fillStyle = '#ff2200';
+  ctx.shadowColor = '#ff0000';
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.arc(-radius * 0.18, -radius * 0.35, 3.5, 0, Math.PI * 2);
+  ctx.arc(radius * 0.18, -radius * 0.35, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawGreenScreenCAM1C(ctx, omcoChar, omcoEnt) {
+  const W = 900;
+  const H = 720;
+  const st = omcoEnt.stage;
+
+  ctx.fillStyle = '#0a100c';
+  ctx.fillRect(0, 0, W, H);
+
+  // Zeleno platno
+  ctx.fillStyle = '#0d632b';
+  ctx.fillRect(170, 90, 560, 420);
+  ctx.strokeStyle = '#1b3d24';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(170, 90, 560, 420);
+
+  // Stativi i softbox rasvjeta
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(195, 510); ctx.lineTo(195, 220);
+  ctx.moveTo(705, 510); ctx.lineTo(705, 220);
+  ctx.stroke();
+
+  ctx.fillStyle = '#fffae0';
+  ctx.fillRect(175, 200, 40, 60);
+  ctx.fillRect(685, 200, 40, 60);
+
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 16px Courier New';
+
+  if (st === 0) {
+    ctx.fillStyle = '#5c1b6e';
+    ctx.fillRect(170, 90, 560, 420);
+    ctx.strokeStyle = '#3d0e4a';
+    ctx.lineWidth = 6;
+    for (let x = 200; x < 720; x += 42) {
+      ctx.beginPath();
+      ctx.moveTo(x, 90); ctx.lineTo(x, 510); ctx.stroke();
+    }
+    ctx.fillStyle = '#eedcb2';
+    ctx.fillRect(320, 260, 260, 75);
+    ctx.strokeStyle = '#664411';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(320, 260, 260, 75);
+    ctx.fillStyle = '#aa1111';
+    ctx.font = 'bold 15px Courier New';
+    ctx.fillText('NE OMETAJ SNIMANJE!', 450, 292);
+    ctx.fillStyle = '#444';
+    ctx.font = '12px Courier New';
+    ctx.fillText('[ OMCO SPAVA IZA ZAVJESE ]', 450, 316);
+
+  } else if (st === 1) {
+    ctx.fillStyle = '#5c1b6e';
+    ctx.fillRect(170, 90, 210, 420);
+    ctx.fillRect(520, 90, 210, 420);
+    drawCharacterPortrait(ctx, omcoChar, 450, 310, 68);
+    ctx.fillStyle = '#ffaa00';
+    ctx.font = 'bold 18px Courier New';
+    ctx.fillText('⚠️ ZAVJESA RAZMAKNUTA - OMCO VIRI!', 450, 140);
+
+  } else if (st === 2) {
+    ctx.fillStyle = '#5c1b6e';
+    ctx.fillRect(170, 90, 90, 420);
+    ctx.fillRect(640, 90, 90, 420);
+    drawCharacterPortrait(ctx, omcoChar, 450, 335, 96, true);
+    ctx.fillStyle = '#ff2222';
+    ctx.font = 'bold 22px Courier New';
+    ctx.fillText('🚨 SPREMAN ZA SPRINT! PAZI NA CAM 2A! 🚨', 450, 140);
+
+  } else {
+    // Vijorenje zavjese i znak bijega
+    const windWiggle = Math.sin(Date.now() / 65) * 35;
+    ctx.fillStyle = '#5c1b6e';
+    ctx.beginPath();
+    ctx.moveTo(170, 90);
+    ctx.lineTo(240 + windWiggle, 90);
+    ctx.quadraticCurveTo(280 + windWiggle, 300, 200 + windWiggle, 510);
+    ctx.lineTo(170, 510);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(730, 90);
+    ctx.lineTo(660 - windWiggle, 90);
+    ctx.quadraticCurveTo(620 - windWiggle, 300, 700 - windWiggle, 510);
+    ctx.lineTo(730, 510);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(370, 470); ctx.lineTo(490, 495);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffe5a3';
+    ctx.fillRect(310, 240, 280, 80);
+    ctx.strokeStyle = '#ff2222';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(310, 240, 280, 80);
+    ctx.fillStyle = '#ff1111';
+    ctx.font = 'bold 20px Courier New';
+    ctx.fillText('IT\'S ME // POBJEGAO JE!', 450, 274);
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillStyle = '#111';
+    ctx.fillText('TRCI KROZ CAM 2A PREMA UREDU!', 450, 302);
+
+    ctx.fillStyle = '#ff2222';
+    ctx.font = 'bold 24px Courier New';
+    ctx.fillText('🏃💨 JURI PREMA LIJEVIM VRATIMA! SPUŠTAJ [A]!', 450, 140);
+  }
+}
+
+function drawWestHallwayCAM2A(ctx, omcoChar, omcoEnt) {
+  const W = 900;
+  const H = 720;
+  const vx = 450;
+  const vy = 265;
+  const isSprint = omcoEnt.sprinting;
+  const sprintLimit = 2.25;
+  const p = isSprint ? Math.min(1.0, omcoEnt.sprintTimer / sprintLimit) : 0;
+
+  ctx.save();
+
+  // Screen shake pri sprintu
+  if (isSprint) {
+    const shakeAmp = 2.5 + p * 18;
+    const sx = (Math.random() - 0.5) * shakeAmp;
+    const sy = (Math.random() - 0.5) * shakeAmp;
+    ctx.translate(sx, sy);
+  }
+
+  // 1. Duboka perspektiva hodnika
+  ctx.fillStyle = '#06080b';
+  ctx.fillRect(0, 0, W, H);
+
+  // Straznji zid
+  const backW = 160;
+  const backH = 175;
+  const backX = vx - backW / 2;
+  const backY = vy - backH / 2;
+  ctx.fillStyle = '#10141a';
+  ctx.fillRect(backX, backY, backW, backH);
+
+  // Vrata na kraju hodnika
+  ctx.fillStyle = '#07090c';
+  ctx.fillRect(vx - 35, vy - 45, 70, 132);
+  ctx.strokeStyle = '#222933';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(vx - 35, vy - 45, 70, 132);
+
+  // EXIT znak
+  const exitGlow = isSprint && (Math.sin(omcoEnt.sprintTimer * 22) > 0);
+  ctx.fillStyle = exitGlow ? '#ff2222' : '#aa1111';
+  ctx.fillRect(vx - 28, vy - 65, 56, 14);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('EXIT ➔', vx, vy - 54);
+
+  // 2. Lijevi i desni zidovi
+  const leftGrad = ctx.createLinearGradient(0, 0, backX, 0);
+  leftGrad.addColorStop(0, '#151921');
+  leftGrad.addColorStop(1, '#0c0f14');
+  ctx.fillStyle = leftGrad;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(backX, backY);
+  ctx.lineTo(backX, backY + backH);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  const rightGrad = ctx.createLinearGradient(W, 0, backX + backW, 0);
+  rightGrad.addColorStop(0, '#13171e');
+  rightGrad.addColorStop(1, '#0b0d12');
+  ctx.fillStyle = rightGrad;
+  ctx.beginPath();
+  ctx.moveTo(W, 0);
+  ctx.lineTo(backX + backW, backY);
+  ctx.lineTo(backX + backW, backY + backH);
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Strop
+  ctx.fillStyle = '#0a0c10';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(W, 0);
+  ctx.lineTo(backX + backW, backY);
+  ctx.lineTo(backX, backY);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Grede i stupovi na zidu
+  [0.25, 0.55, 0.85].forEach((t) => {
+    const colX = backX * (1 - t);
+    const colTopY = backY * (1 - t);
+    const colBotY = (backY + backH) + (H - (backY + backH)) * t;
+    const beamW = 12 + t * 24;
+
+    ctx.fillStyle = '#1c222b';
+    ctx.fillRect(colX, colTopY, beamW, colBotY - colTopY);
+    ctx.strokeStyle = '#2d3744';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(colX, colTopY, beamW, colBotY - colTopY);
+  });
+
+  // Plakat na lijevom zidu ("CELEBRATE!")
+  const postX = 95;
+  const postY = 250;
+  const postW = 90;
+  const postH = 125;
+  ctx.fillStyle = '#dcd5c0';
+  ctx.fillRect(postX, postY, postW, postH);
+  ctx.fillStyle = '#aa0000';
+  ctx.fillRect(postX, postY, postW, 22);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('CELEBRATE!', postX + postW / 2, postY + 15);
+  ctx.fillStyle = '#333';
+  ctx.fillText('★ BALKAN ★', postX + postW / 2, postY + 50);
+  ctx.fillText('STREAMERS', postX + postW / 2, postY + 70);
+  ctx.fillStyle = '#ff8800';
+  ctx.fillRect(postX + 10, postY + 82, postW - 20, 24);
+
+  // Desni zid - kabeli i kutija
+  ctx.strokeStyle = '#08080a';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(backX + backW, backY + 40);
+  ctx.quadraticCurveTo(620, backY + 110, W, 420);
+  ctx.stroke();
+
+  ctx.fillStyle = '#262d36';
+  ctx.fillRect(720, 310, 65, 85);
+  ctx.strokeStyle = '#3a4552';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(720, 310, 65, 85);
+  ctx.fillStyle = isSprint ? '#ff2222' : '#33ff55';
+  ctx.beginPath();
+  ctx.arc(740, 330, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4. Karirani pod u perspektivi
+  const floorTopY = backY + backH;
+  const floorPoly = new Path2D();
+  floorPoly.moveTo(backX, floorTopY);
+  floorPoly.lineTo(backX + backW, floorTopY);
+  floorPoly.lineTo(W, H);
+  floorPoly.lineTo(0, H);
+  floorPoly.closePath();
+
+  ctx.save();
+  ctx.clip(floorPoly);
+
+  ctx.fillStyle = '#0f1216';
+  ctx.fillRect(0, floorTopY, W, H - floorTopY);
+
+  const numRows = 14;
+  const numCols = 8;
+  for (let r = 0; r < numRows; r++) {
+    const t0 = Math.pow(r / numRows, 2.1);
+    const t1 = Math.pow((r + 1) / numRows, 2.1);
+    const y0 = floorTopY + (H - floorTopY) * t0;
+    const y1 = floorTopY + (H - floorTopY) * t1;
+
+    const rowLeftX0 = backX * (1 - t0);
+    const rowRightX0 = (backX + backW) + (W - (backX + backW)) * t0;
+    const rowLeftX1 = backX * (1 - t1);
+    const rowRightX1 = (backX + backW) + (W - (backX + backW)) * t1;
+
+    for (let c = 0; c < numCols; c++) {
+      if ((r + c) % 2 === 0) {
+        const x00 = rowLeftX0 + (rowRightX0 - rowLeftX0) * (c / numCols);
+        const x01 = rowLeftX0 + (rowRightX0 - rowLeftX0) * ((c + 1) / numCols);
+        const x10 = rowLeftX1 + (rowRightX1 - rowLeftX1) * (c / numCols);
+        const x11 = rowLeftX1 + (rowRightX1 - rowLeftX1) * ((c + 1) / numCols);
+
+        ctx.fillStyle = isSprint && (r % 2 === 0) ? '#281216' : '#1c222b';
+        ctx.beginPath();
+        ctx.moveTo(x00, y0);
+        ctx.lineTo(x01, y0);
+        ctx.lineTo(x11, y1);
+        ctx.lineTo(x10, y1);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  }
+
+  // Odsjaj poda
+  const floorGlow = ctx.createLinearGradient(vx, floorTopY, vx, H);
+  floorGlow.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+  floorGlow.addColorStop(0.5, isSprint ? 'rgba(255, 30, 30, 0.18)' : 'rgba(100, 255, 180, 0.04)');
+  floorGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = floorGlow;
+  ctx.fillRect(0, floorTopY, W, H - floorTopY);
+  ctx.restore();
+
+  // 5. Neonska rasvjeta i rotirka
+  [0.2, 0.5, 0.8].forEach(t => {
+    const lightW = 20 + t * 65;
+    const lightH = 5 + t * 10;
+    const lightY = 40 + t * (backY - 40);
+    ctx.fillStyle = isSprint && (Math.sin(omcoEnt.sprintTimer * 26) > 0) ? '#ff4444' : '#e6fff0';
+    ctx.fillRect(vx - lightW / 2, lightY, lightW, lightH);
+  });
+
+  if (isSprint) {
+    const sirenX = 140;
+    const sirenY = 160;
+    const sirenFlash = Math.sin(omcoEnt.sprintTimer * 24);
+    const sirenGrad = ctx.createRadialGradient(sirenX, sirenY, 5, sirenX, sirenY, 140);
+    sirenGrad.addColorStop(0, 'rgba(255, 30, 30, 0.7)');
+    sirenGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    ctx.fillStyle = sirenGrad;
+    ctx.beginPath();
+    ctx.arc(sirenX, sirenY, 140, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(255, 0, 0, ${0.12 + 0.16 * Math.abs(sirenFlash)})`;
+    ctx.fillRect(0, 0, W, H);
+
+    // Brzinske linije
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 2;
+    for (let sl = 0; sl < 10; sl++) {
+      const angle = (sl / 10) * Math.PI * 2;
+      const speedOffset = (omcoEnt.sprintTimer * 850 + sl * 90) % 450;
+      const lineLen = 60 + p * 120;
+      const lx1 = vx + Math.cos(angle) * speedOffset;
+      const ly1 = vy + Math.sin(angle) * (speedOffset * 0.75);
+      const lx2 = vx + Math.cos(angle) * (speedOffset + lineLen);
+      const ly2 = vy + Math.sin(angle) * ((speedOffset + lineLen) * 0.75);
+      ctx.beginPath();
+      ctx.moveTo(lx1, ly1);
+      ctx.lineTo(lx2, ly2);
+      ctx.stroke();
+    }
+  }
+
+  // 6. Animacija Foxy trkaca
+  if (isSprint) {
+    drawFoxySprinter(ctx, omcoChar, omcoEnt, p, vx, vy, W, H);
+  } else {
+    ctx.fillStyle = '#33ff55';
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('● CAM 2A // LIJEVI HODNIK - MIRNO', vx, 110);
+  }
+
+  // 7. VHS Scanlines
+  if (isSprint) {
+    for (let g = 0; g < 14; g++) {
+      const gy = (Math.random() * H);
+      const gh = 2 + Math.random() * 8;
+      ctx.fillStyle = `rgba(255, 50, 50, ${0.15 + Math.random() * 0.25})`;
+      ctx.fillRect(0, gy, W, gh);
+    }
+    ctx.fillStyle = '#ff2222';
+    ctx.font = 'bold 24px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('🚨 UZBUNA: SPRINT KROZ LIJEVI HODNIK! [A] ZA ROLETNU! 🚨', vx, H - 45);
+  }
+
+  ctx.restore();
+}
+
+function drawFoxySprinter(ctx, omcoChar, omcoEnt, p, vx, vy, W, H) {
+  const scale = 0.22 + Math.pow(p, 1.8) * 2.15;
+  const runCycle = omcoEnt.sprintTimer * 32;
+
+  const swayX = Math.sin(runCycle) * (26 * scale);
+  const runnerX = vx + swayX - (scale * 12);
+  const bounceY = Math.abs(Math.sin(runCycle * 2)) * (16 * scale);
+  const baseY = (vy + 60) + (H - (vy + 60) - 40) * Math.pow(p, 1.6);
+  const runnerY = baseY - bounceY;
+
+  // Motion blur duhovi iza trkaca
+  for (let trail = 2; trail >= 1; trail--) {
+    const trailP = Math.max(0, p - trail * 0.045);
+    const trailScale = 0.22 + Math.pow(trailP, 1.8) * 2.15;
+    const trailSway = Math.sin(runCycle - trail * 0.6) * (26 * trailScale);
+    const trailX = vx + trailSway - (trailScale * 12);
+    const trailBaseY = (vy + 60) + (H - (vy + 60) - 40) * Math.pow(trailP, 1.6);
+    const trailBounce = Math.abs(Math.sin((runCycle - trail * 0.6) * 2)) * (16 * trailScale);
+    const trailY = trailBaseY - trailBounce;
+
+    ctx.save();
+    ctx.globalAlpha = 0.24 / trail;
+    renderFoxyFrame(ctx, omcoChar, trailX, trailY, trailScale, runCycle - trail * 0.6, true);
+    ctx.restore();
+  }
+
+  // Prasina od udarca noge o pod
+  if (bounceY < 4 * scale) {
+    const dustX = runnerX + (Math.sin(runCycle) > 0 ? -25 * scale : 25 * scale);
+    const dustY = runnerY + 68 * scale;
+    ctx.save();
+    ctx.fillStyle = 'rgba(180, 150, 120, 0.35)';
+    ctx.beginPath();
+    ctx.arc(dustX, dustY, 14 * scale, 0, Math.PI * 2);
+    ctx.arc(dustX + 10 * scale, dustY - 4 * scale, 9 * scale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Glavni model trkaca
+  renderFoxyFrame(ctx, omcoChar, runnerX, runnerY, scale, runCycle, false);
+}
+
+function renderFoxyFrame(ctx, omcoChar, cx, cy, scale, cycle, isTrail) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+
+  const lean = 0.36 + Math.sin(cycle) * 0.08;
+  ctx.rotate(lean);
+
+  const stride = Math.sin(cycle);
+  const mainColor = isTrail ? '#4a0808' : (omcoChar.color || '#cc3333');
+  const metalColor = isTrail ? '#222' : '#777e8a';
+  const darkMetal = '#2b3038';
+
+  // 1. Zglobne animatronik noge
+  const hipLX = -14;
+  const hipLY = 18;
+  const lThighAngle = stride * 0.95;
+  const lKneeX = hipLX + Math.sin(lThighAngle) * 26;
+  const lKneeY = hipLY + Math.cos(lThighAngle) * 26;
+  const lShinAngle = lThighAngle - Math.abs(stride) * 0.8;
+  const lFootX = lKneeX + Math.sin(lShinAngle) * 28;
+  const lFootY = lKneeY + Math.cos(lShinAngle) * 28;
+
+  const hipRX = 14;
+  const hipRY = 18;
+  const rThighAngle = -stride * 0.95;
+  const rKneeX = hipRX + Math.sin(rThighAngle) * 26;
+  const rKneeY = hipRY + Math.cos(rThighAngle) * 26;
+  const rShinAngle = rThighAngle - Math.abs(-stride) * 0.8;
+  const rFootX = rKneeX + Math.sin(rShinAngle) * 28;
+  const rFootY = rKneeY + Math.cos(rShinAngle) * 28;
+
+  const drawLeg = (hx, hy, kx, ky, fx, fy, isLeft) => {
+    ctx.strokeStyle = isLeft ? mainColor : '#aa2222';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(kx, ky);
+    ctx.stroke();
+
+    ctx.fillStyle = metalColor;
+    ctx.beginPath();
+    ctx.arc(kx, ky, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = metalColor;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(kx, ky);
+    ctx.lineTo(fx, fy);
+    ctx.stroke();
+
+    ctx.fillStyle = darkMetal;
+    ctx.beginPath();
+    ctx.ellipse(fx + 6, fy, 10, 4, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  if (stride > 0) {
+    drawLeg(hipRX, hipRY, rKneeX, rKneeY, rFootX, rFootY, false);
+    drawLeg(hipLX, hipLY, lKneeX, lKneeY, lFootX, lFootY, true);
+  } else {
+    drawLeg(hipLX, hipLY, lKneeX, lKneeY, lFootX, lFootY, true);
+    drawLeg(hipRX, hipRY, rKneeX, rKneeY, rFootX, rFootY, false);
+  }
+
+  // 2. Zdjelica i prsa
+  ctx.fillStyle = darkMetal;
+  ctx.fillRect(-16, 10, 32, 12);
+
+  ctx.fillStyle = mainColor;
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(0, -6, 26, 20, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Poderano krzno s rebrima endoskeleta
+  ctx.fillStyle = '#1a1d22';
+  ctx.fillRect(-12, -12, 24, 14);
+  ctx.strokeStyle = metalColor;
+  ctx.lineWidth = 2.5;
+  for (let rib = -10; rib <= 0; rib += 5) {
+    ctx.beginPath();
+    ctx.moveTo(-10, rib);
+    ctx.lineTo(10, rib);
+    ctx.stroke();
+  }
+
+  // 3. Ruke u trku
+  const armSwing = Math.sin(cycle);
+  // Lijeva ruka (kandze prema naprijed)
+  const lArmAngle = -0.5 + armSwing * 0.9;
+  const lElbowX = -24 + Math.sin(lArmAngle) * 22;
+  const lElbowY = -12 + Math.cos(lArmAngle) * 22;
+  const lHandX = lElbowX + Math.sin(lArmAngle - 1.2) * 20;
+  const lHandY = lElbowY + Math.cos(lArmAngle - 1.2) * 20;
+
+  ctx.strokeStyle = mainColor;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(-22, -14);
+  ctx.lineTo(lElbowX, lElbowY);
+  ctx.stroke();
+
+  ctx.strokeStyle = metalColor;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(lElbowX, lElbowY);
+  ctx.lineTo(lHandX, lHandY);
+  ctx.stroke();
+
+  ctx.fillStyle = darkMetal;
+  ctx.beginPath();
+  ctx.arc(lHandX, lHandY, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Desna ruka s Foxy kukom!
+  const rArmAngle = -0.5 - armSwing * 0.9;
+  const rElbowX = 24 + Math.sin(rArmAngle) * 22;
+  const rElbowY = -12 + Math.cos(rArmAngle) * 22;
+  const rHandX = rElbowX + Math.sin(rArmAngle + 1.2) * 20;
+  const rHandY = rElbowY + Math.cos(rArmAngle + 1.2) * 20;
+
+  ctx.strokeStyle = mainColor;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(22, -14);
+  ctx.lineTo(rElbowX, rElbowY);
+  ctx.stroke();
+
+  ctx.strokeStyle = metalColor;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(rElbowX, rElbowY);
+  ctx.lineTo(rHandX, rHandY);
+  ctx.stroke();
+
+  // Metalna kuka
+  ctx.strokeStyle = '#d5dde8';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.arc(rHandX + 4, rHandY - 4, 8, 0.4, Math.PI * 1.5, false);
+  ctx.stroke();
+
+  // 4. Glava, usi i skakuca celjust
+  const headY = -36 + Math.sin(cycle * 2) * 2;
+  const headTilt = Math.sin(cycle) * 0.12;
+
+  ctx.save();
+  ctx.translate(0, headY);
+  ctx.rotate(headTilt);
+
+  // Lisicje usi
+  ctx.fillStyle = mainColor;
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-16, -14);
+  ctx.lineTo(-32, -32);
+  ctx.lineTo(-10, -22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(16, -14);
+  ctx.lineTo(32, -32);
+  ctx.lineTo(10, -22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Otkacena celjust (Snapping Jaw)
+  const jawDrop = 8 + 14 * Math.abs(Math.sin(cycle * 1.6));
+  ctx.fillStyle = '#1a0406';
+  ctx.strokeStyle = mainColor;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(0, 10 + jawDrop / 2, 16, 6 + jawDrop / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Ostri animatronik zubi
+  ctx.fillStyle = '#eee';
+  for (let tooth = -12; tooth <= 12; tooth += 5) {
+    ctx.beginPath();
+    ctx.moveTo(tooth - 2, 6);
+    ctx.lineTo(tooth + 2, 6);
+    ctx.lineTo(tooth, 11);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(tooth - 2, 14 + jawDrop);
+    ctx.lineTo(tooth + 2, 14 + jawDrop);
+    ctx.lineTo(tooth, 9 + jawDrop);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Glava
+  if (omcoChar.customImg) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, -6, 22, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(omcoChar.customImg, -22, -28, 44, 44);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = mainColor;
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, -6, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(0, 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Svjetlece demonske oci
+  const eyeX = 8;
+  const eyeY = -9;
+  ctx.fillStyle = '#050000';
+  ctx.beginPath();
+  ctx.arc(-eyeX, eyeY, 5.5, 0, Math.PI * 2);
+  ctx.arc(eyeX, eyeY, 5.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#ff2200';
+  ctx.shadowColor = '#ff3300';
+  ctx.shadowBlur = isTrail ? 0 : 12;
+  ctx.beginPath();
+  ctx.arc(-eyeX, eyeY, 2.5, 0, Math.PI * 2);
+  ctx.arc(eyeX, eyeY, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  if (!isTrail) {
+    ctx.strokeStyle = 'rgba(255, 60, 0, 0.45)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-eyeX, eyeY);
+    ctx.lineTo(-eyeX - 18, eyeY);
+    ctx.moveTo(eyeX, eyeY);
+    ctx.lineTo(eyeX - 18, eyeY);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+  ctx.restore();
+}
 
 // ----------------------------------------------------------------------------
 // 12. POKRETANJE GLAVNE PETLJE IGRE
